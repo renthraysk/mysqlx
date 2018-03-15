@@ -20,14 +20,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ExecMsgExecuter interface {
+type execMsgExecuter interface {
 	ExecMsg(ctx context.Context, msg msg.Msg) (driver.Result, error)
 }
 
-type QueryMsgExecuter interface {
+type queryMsgExecuter interface {
 	QueryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error)
 }
 
+// Conn the interface of our driver.Conn plus extra methods
 type Conn interface {
 	driver.Conn
 
@@ -42,8 +43,8 @@ type Conn interface {
 	driver.NamedValueChecker
 	driver.SessionResetter
 
-	ExecMsgExecuter
-	QueryMsgExecuter
+	execMsgExecuter
+	queryMsgExecuter
 }
 
 type conn struct {
@@ -102,7 +103,7 @@ func (c *conn) readMessage(ctx context.Context) (mysqlx.ServerMessages_Type, []b
 	if n <= 1 {
 		return t, nil, nil
 	}
-	b, err = c.read(ctx, n - 1)
+	b, err = c.read(ctx, n-1)
 	return t, b, err
 }
 
@@ -135,14 +136,14 @@ readExecResponse:
 		return nil, newError(b)
 
 	case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-		return nil, nil
+		break
 
 	case mysqlx.ServerMessages_NOTICE:
 		goto readExecResponse
 	default:
 		goto readExecResponse
 	}
-	return nil, err
+	return nil, nil
 }
 
 func (c *conn) Exec(stmt string, args []driver.Value) (driver.Result, error) {
@@ -189,13 +190,13 @@ readColumnMetaData:
 
 	case mysqlx.ServerMessages_RESULTSET_COLUMN_META_DATA:
 
-		var cmd *ColumnMetaData
+		var cmd *columnMetaData
 
 		n := len(r.columns)
 		if n < len(r.buf) {
 			cmd = &r.buf[n]
 		} else {
-			cmd = new(ColumnMetaData)
+			cmd = new(columnMetaData)
 		}
 		if err := cmd.Unmarshal(r.last.b); err != nil {
 			return nil, err

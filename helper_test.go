@@ -1,7 +1,6 @@
 package mysqlx
 
 import (
-	"context"
 	"crypto/tls"
 	"database/sql"
 	"testing"
@@ -28,19 +27,4 @@ func NewDB(tb testing.TB) *sql.DB {
 	tb.Helper()
 
 	return sql.OpenDB(NewConnector(tb))
-}
-
-func FlushAuthenticationCache(tb testing.TB) {
-	tb.Helper()
-
-	connector, err := New("tcp", ipAddress, WithUserPassword("root", ""))
-
-	conn, err := connector.connect(context.Background())
-	if err != nil {
-		tb.Fatalf("failed to connect: %s", err)
-	}
-	defer conn.Close()
-	if _, err := conn.ExecContext(context.Background(), "FLUSH PRIVILEGES", nil); err != nil {
-		tb.Fatalf("failed to flush privileges: %s", err)
-	}
 }

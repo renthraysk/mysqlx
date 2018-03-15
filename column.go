@@ -27,7 +27,7 @@ const (
 	tagColumnMetaDataContentType      = 12
 )
 
-type ColumnMetaData struct {
+type columnMetaData struct {
 	fieldType         mysqlx_resultset.ColumnMetaData_FieldType
 	name              string
 	hasFlags          bool
@@ -41,7 +41,7 @@ type ColumnMetaData struct {
 	scale             int64
 }
 
-func (c *ColumnMetaData) Reset() {
+func (c *columnMetaData) reset() {
 	c.fieldType = mysqlx_resultset.ColumnMetaData_SINT
 	c.name = ""
 	c.hasFlags = false
@@ -50,18 +50,18 @@ func (c *ColumnMetaData) Reset() {
 	c.hasCollation = false
 }
 
-func (c *ColumnMetaData) IsBinary() bool {
+func (c *columnMetaData) isBinary() bool {
 	return c.fieldType == mysqlx_resultset.ColumnMetaData_BYTES && c.hasCollation && c.collation.IsBinary()
 }
 
-func (c *ColumnMetaData) Nullable() (bool, bool) {
+func (c *columnMetaData) Nullable() (bool, bool) {
 	return c.flags&columnFlagNotNull == 0, c.hasFlags
 }
 
-func (c *ColumnMetaData) Unmarshal(b []byte) error {
+func (c *columnMetaData) Unmarshal(b []byte) error {
 	var nn int
 
-	c.Reset()
+	c.reset()
 
 	i, n := uint64(0), uint64(len(b))
 	for i < n {
@@ -153,7 +153,7 @@ func (c *ColumnMetaData) Unmarshal(b []byte) error {
 	return nil
 }
 
-type columns []*ColumnMetaData
+type columns []*columnMetaData
 
 func (c columns) Columns() []string {
 	names := make([]string, len(c))

@@ -19,23 +19,10 @@ const (
 	tagRowValue = 1
 )
 
-type Rows interface {
-	driver.Rows
-
-	//	HasNextResultSet() bool // driver.RowsNextResultSet
-	//	NextResultSet() error
-
-	// ColumnTypeScanType(index int) reflect.Type          // driver.RowsColumnTypeScanType
-	ColumnTypeDatabaseTypeName(index int) string        // driver.RowsColumnTypeDatabaseTypeName
-	ColumnTypeLength(index int) (length int64, ok bool) // driver.RowsColumnTypeLength
-	ColumnTypeNullable(index int) (nullable, ok bool)   // driver.RowsColumnTypeNullable
-	//	ColumnTypePrecisionScale(index int) (precision, scale int64, ok bool) // driver.RowsColumnTypePrecisionScale
-}
-
 type rows struct {
-	conn *conn
-	columns
-	last struct {
+	conn    *conn
+	columns // exposes ColumnType*() methods
+	last    struct {
 		t   mysqlx.ServerMessages_Type
 		b   []byte
 		err error
@@ -43,7 +30,7 @@ type rows struct {
 
 	names []string
 
-	buf [16]ColumnMetaData
+	buf [16]columnMetaData
 }
 
 func (r *rows) Close() error {
@@ -59,15 +46,6 @@ func (r *rows) Columns() []string {
 		r.names = r.columns.Columns()
 	}
 	return r.names
-}
-
-func (r *rows) HasNextResultSet() bool {
-	// return r.last.err == nil && r.last.t == mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS ?
-	return false
-}
-
-func (r *rows) NextResultSet() error {
-	return nil
 }
 
 func (r *rows) Next(values []driver.Value) error {
@@ -177,14 +155,14 @@ func (r *rows) unmarshalValues(b []byte, values []driver.Value) error {
 				values[index] = math.Float32frombits(binary.LittleEndian.Uint32(b[i:j]))
 
 			case mysqlx_resultset.ColumnMetaData_BYTES:
-				if column.IsBinary() {
+				if column.isBinary() {
 					// database/sql's convertAssign() will cloneBytes() unless being scanned into a sql.RawBytes{}
 					values[index] = b[i : j-1 : j-1]
 					break
 				}
 				fallthrough
 			case mysqlx_resultset.ColumnMetaData_ENUM:
-				// lazy allocation/conversion whole of b to a string... reduces allocations if more > 1 string column.
+				// lazy allocation/conversion whole of b to a string... reduces allocations if more > 2 string column.
 				if len(s) == 0 {
 					s = string(b[i:])
 					offset = i

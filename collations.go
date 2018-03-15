@@ -1,7 +1,9 @@
 package mysqlx
 
+// Collation is a mysql collation
 type Collation uint64
 
+// IsBinary returns whether this Collation represents the binary collation
 func (c Collation) IsBinary() bool {
 	return c == collations["binary"]
 }

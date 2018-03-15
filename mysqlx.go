@@ -9,13 +9,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Severity = mysqlx.Error_Severity
+// Severity level of an Error
+type Severity mysqlx.Error_Severity
 
+func (s Severity) String() string {
+	switch s {
+	case SeverityError:
+		return "Error"
+	case SeverityFatal:
+		return "Fatal"
+	}
+	return "Unknown"
+}
+
+// Imported consts from the protobuf to so users not have to import the protobuf
 const (
-	SeverityError Severity = mysqlx.Error_ERROR
-	SeverityFatal Severity = mysqlx.Error_FATAL
+	SeverityError Severity = Severity(mysqlx.Error_ERROR)
+	SeverityFatal Severity = Severity(mysqlx.Error_FATAL)
 )
 
+// Error represents a mysqlx Error
 type Error struct {
 	Severity Severity
 	Code     uint32
@@ -34,7 +47,7 @@ func newError(b []byte) error {
 		return errors.Wrapf(err, "failed to unmarshal mysqlx.Error %x", b)
 	}
 	return &Error{
-		Severity: e.GetSeverity(),
+		Severity: Severity(e.GetSeverity()),
 		Code:     e.GetCode(),
 		SQLState: e.GetSqlState(),
 		Msg:      e.GetMsg(),

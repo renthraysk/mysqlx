@@ -13,8 +13,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Option is a functional option for creating the Connector
 type Option func(*Connector) error
 
+// Connector is the database/sql.Connector implementation
 type Connector struct {
 	network         string
 	addr            string
@@ -24,19 +26,24 @@ type Connector struct {
 	username        string
 	password        string
 	authentication  authentication.Starter
-	stmtPreparer    StmtPreparer
-	sessionResetter SessionResetter
+	stmtPreparer    stmtPreparer
+	sessionResetter sessionResetter
 
 	bufferSize int
 }
 
 const minBufferSize = 32 * 1024
 
-// authentication.Credentials interface implementation
+// UserName returns the user name of the account to authenticate with.
 func (cnn *Connector) UserName() string { return cnn.username }
+
+// Password returns the password of the account to authenticate with.
 func (cnn *Connector) Password() string { return cnn.password }
+
+// Database returns the database name to authenticate with.
 func (cnn *Connector) Database() string { return cnn.database }
 
+// New creates a database/sql.Connector
 func New(network, addr string, options ...Option) (*Connector, error) {
 
 	cnn := &Connector{
@@ -57,6 +64,7 @@ func New(network, addr string, options ...Option) (*Connector, error) {
 	return cnn, nil
 }
 
+// WithDialer replaces the default net.Dialer for connecting to mysql.
 func WithDialer(netDialer net.Dialer) Option {
 	return func(cnn *Connector) error {
 		cnn.netDialer = netDialer
@@ -64,6 +72,7 @@ func WithDialer(netDialer net.Dialer) Option {
 	}
 }
 
+// WithDatabase sets the database the connector will be default after successful connection and authentication
 func WithDatabase(database string) Option {
 	return func(cnn *Connector) error {
 		cnn.database = database
@@ -71,6 +80,9 @@ func WithDatabase(database string) Option {
 	}
 }
 
+// WithAuthentication set the authentication mechanism that will authentication with.
+// If authenticating a connecting using TLS then either authentication/native for accounts using the mysql_native_password authentication plugin or authentication/sha256 for those using sha256_password or caching_sha2_password.
+// If not using a TLS connection then using authentication/native is the only reliable option.
 func WithAuthentication(auth authentication.Starter) Option {
 	return func(cnn *Connector) error {
 		cnn.authentication = auth
@@ -78,6 +90,7 @@ func WithAuthentication(auth authentication.Starter) Option {
 	}
 }
 
+// WithUserPassword set the username and password pair of the account to authenticate with.
 func WithUserPassword(username, password string) Option {
 	return func(cnn *Connector) error {
 		cnn.username = username
@@ -86,6 +99,7 @@ func WithUserPassword(username, password string) Option {
 	}
 }
 
+// WithTLSConfig set the TLS configuration to connect to mysqlx with.
 func WithTLSConfig(tlsConfig *tls.Config) Option {
 	return func(cnn *Connector) error {
 		cnn.tlsConfig = tlsConfig
@@ -93,6 +107,7 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 	}
 }
 
+// WithBufferSize sets the internal read/write buffer size. It will be automatically enlarged if larger reads are required.
 func WithBufferSize(size int) Option {
 	return func(cnn *Connector) error {
 		if size > minBufferSize {
@@ -102,6 +117,7 @@ func WithBufferSize(size int) Option {
 	}
 }
 
+// Connect is the database/sql.Connector Connect() implementation
 func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	return cnn.connect(ctx)
 }
@@ -145,6 +161,7 @@ func (cnn *Connector) connect(ctx context.Context) (Conn, error) {
 	return conn, nil
 }
 
+// Driver is the database/sql.Connector Driver() implementation
 func (cnn *Connector) Driver() driver.Driver {
 	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"database/sql/driver"
 )
 
-type StmtPreparer func(c Conn, query string) (driver.Stmt, error)
+type stmtPreparer func(c Conn, query string) (driver.Stmt, error)
 
 func noStmtPreparer(c Conn, query string) (driver.Stmt, error) {
 	return &notPreparedStmt{c, query}, nil

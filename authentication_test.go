@@ -1,7 +1,6 @@
 package mysqlx
 
 import (
-	"crypto/tls"
 	"database/sql"
 	"testing"
 

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type SessionResetter func(ctx context.Context, c *conn) error
+type sessionResetter func(ctx context.Context, c *conn) error
 
 func noSessionResetter(ctx context.Context, c *conn) error {
 	return nil
