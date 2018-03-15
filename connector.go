@@ -143,7 +143,7 @@ func (cnn *Connector) connect(ctx context.Context) (Conn, error) {
 		// TLS
 		if cnn.tlsConfig != nil {
 			s := msg.NewCapabilitySetTLSEnable(conn.buf[:0])
-			if _, err := conn.ExecMsg(ctx, s); err != nil {
+			if _, err := conn.execMsg(ctx, s); err != nil {
 				return nil, errors.Wrap(err, "failed to set TLS capability")
 			}
 			tlsConn := tls.Client(conn.netConn, cnn.tlsConfig)

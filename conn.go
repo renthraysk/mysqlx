@@ -21,11 +21,11 @@ import (
 )
 
 type execMsgExecuter interface {
-	ExecMsg(ctx context.Context, msg msg.Msg) (driver.Result, error)
+	execMsg(ctx context.Context, msg msg.Msg) (driver.Result, error)
 }
 
 type queryMsgExecuter interface {
-	QueryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error)
+	queryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error)
 }
 
 // Conn the interface of our driver.Conn plus extra methods
@@ -118,7 +118,7 @@ func (c *conn) send(ctx context.Context, msg msg.Msg) error {
 	return err
 }
 
-func (c *conn) ExecMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
+func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 	err := c.send(ctx, m)
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (c *conn) Exec(stmt string, args []driver.Value) (driver.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.ExecMsg(context.Background(), s)
+	return c.execMsg(context.Background(), s)
 }
 
 func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Result, error) {
@@ -159,10 +159,10 @@ func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.Named
 	if err != nil {
 		return nil, err
 	}
-	return c.ExecMsg(ctx, s)
+	return c.execMsg(ctx, s)
 }
 
-func (c *conn) QueryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error) {
+func (c *conn) queryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error) {
 	if err := c.send(ctx, msg); err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func (c *conn) Query(stmt string, args []driver.Value) (driver.Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.QueryMsg(context.Background(), s)
+	return c.queryMsg(context.Background(), s)
 }
 
 func (c *conn) QueryContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Rows, error) {
@@ -222,7 +222,7 @@ func (c *conn) QueryContext(ctx context.Context, stmt string, args []driver.Name
 	if err != nil {
 		return nil, err
 	}
-	return c.QueryMsg(ctx, s)
+	return c.queryMsg(ctx, s)
 }
 
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
@@ -295,7 +295,7 @@ func (c *conn) Begin() (driver.Tx, error) {
 func (c *conn) Ping(ctx context.Context) error {
 	ping := msg.NewStmtExecute(c.buf[:0], "ping")
 	ping.SetNamespace("mysqlx")
-	_, err := c.ExecMsg(ctx, ping)
+	_, err := c.execMsg(ctx, ping)
 	return err
 }
 

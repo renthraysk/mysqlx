@@ -25,25 +25,40 @@ func TestAuthentication(t *testing.T) {
 		"tcp-native": {
 			"tcp",
 			ipAddress,
-			[]Option{WithAuthentication(native.New()), WithUserPassword("usernative", "passwordnative")},
+			[]Option{
+				WithAuthentication(native.New()),
+				WithUserPassword("usernative", "passwordnative"),
+			},
 		},
 
 		"tls-native": {
 			"tcp",
 			ipAddress,
-			[]Option{WithTLSConfig(tlsConfig), WithAuthentication(native.New()), WithUserPassword("usernative", "passwordnative")},
+			[]Option{
+				WithTLSConfig(tlsConfig),
+				WithAuthentication(native.New()),
+				WithUserPassword("usernative", "passwordnative"),
+			},
 		},
 
 		"tls-sha2": {
 			"tcp",
 			ipAddress,
-			[]Option{WithTLSConfig(tlsConfig), WithAuthentication(sha256.New()), WithUserPassword("usersha2", "passwordsha2")},
+			[]Option{
+				WithTLSConfig(tlsConfig),
+				WithAuthentication(sha256.New()),
+				WithUserPassword("usersha2", "passwordsha2"),
+			},
 		},
 
 		"tls-sha256": {
 			"tcp",
 			ipAddress,
-			[]Option{WithTLSConfig(tlsConfig), WithAuthentication(sha256.New()), WithUserPassword("usersha256", "passwordsha256")},
+			[]Option{
+				WithTLSConfig(tlsConfig),
+				WithAuthentication(sha256.New()),
+				WithUserPassword("usersha256", "passwordsha256"),
+			},
 		},
 	}
 
