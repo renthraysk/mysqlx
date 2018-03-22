@@ -5,6 +5,44 @@ import (
 	"testing"
 )
 
+func BenchmarkSimpleExec(b *testing.B) {
+	b.ReportAllocs()
+	db := NewDB(b)
+	defer db.Close()
+	for i := 0; i < b.N; i++ {
+		if _, err := db.Exec("DO 1"); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkPreparedExec(b *testing.B) {
+	b.ReportAllocs()
+	db := NewDB(b)
+	defer db.Close()
+	stmt, err := db.Prepare("DO 1")
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		if _, err := stmt.Exec(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkSimpleQueryRow(b *testing.B) {
+	b.ReportAllocs()
+	db := NewDB(b)
+	defer db.Close()
+	var num int
+	for i := 0; i < b.N; i++ {
+		if err := db.QueryRow("SELECT 1").Scan(&num); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkConnectAuthentication(b *testing.B) {
 	b.ReportAllocs()
 	connector := NewConnector(b)

@@ -34,13 +34,13 @@ type Connector struct {
 
 const minBufferSize = 32 * 1024
 
-// UserName returns the user name of the account to authenticate with.
+// UserName returns the user name of the account to authenticate with. Part of authentication.Credentials inteface.
 func (cnn *Connector) UserName() string { return cnn.username }
 
-// Password returns the password of the account to authenticate with.
+// Password returns the password of the account to authenticate with. Part of authentication.Credentials inteface.
 func (cnn *Connector) Password() string { return cnn.password }
 
-// Database returns the database name to authenticate with.
+// Database returns the database name to authenticate with. Part of authentication.Credentials inteface.
 func (cnn *Connector) Database() string { return cnn.database }
 
 // New creates a database/sql.Connector
@@ -81,8 +81,8 @@ func WithDatabase(database string) Option {
 }
 
 // WithAuthentication set the authentication mechanism that will authentication with.
-// If authenticating a connecting using TLS then either authentication/native for accounts using the mysql_native_password authentication plugin or authentication/sha256 for those using sha256_password or caching_sha2_password.
-// If not using a TLS connection then using authentication/native is the only reliable option.
+// If authenticating a connection over TLS then either authentication/native for accounts using the mysql_native_password authentication plugin or authentication/sha256 for those using sha256_password or caching_sha2_password.
+// If not using a TLS connection then authentication/native is the only reliable option.
 func WithAuthentication(auth authentication.Starter) Option {
 	return func(cnn *Connector) error {
 		cnn.authentication = auth

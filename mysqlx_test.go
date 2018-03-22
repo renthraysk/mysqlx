@@ -50,19 +50,19 @@ const SelectAll = `SELECT
 FROM film`
 
 type film struct {
-	filmID           uint16
-	title            string
-	description      sql.NullString
-	releaseYear      sql.NullInt64
-	languageID       uint8
-	originalLanguage sql.NullInt64
-	rentalDuration   uint8
-	rentalRate       string
-	length           sql.NullInt64
-	replacementCost  string
-	rating           sql.NullString
-	specialFeatures  sql.NullString
-	lastUpdate       time.Time
+	filmID             uint16
+	title              string
+	description        sql.NullString
+	releaseYear        sql.NullInt64
+	languageID         uint8
+	originalLanguageID sql.NullInt64
+	rentalDuration     uint8
+	rentalRate         string
+	length             sql.NullInt64
+	replacementCost    string
+	rating             sql.NullString
+	specialFeatures    sql.NullString
+	lastUpdate         time.Time
 }
 
 func (f *film) Scan(rows *sql.Rows) error {
@@ -72,7 +72,7 @@ func (f *film) Scan(rows *sql.Rows) error {
 		&f.description,
 		&f.releaseYear,
 		&f.languageID,
-		&f.originalLanguage,
+		&f.originalLanguageID,
 		&f.rentalDuration,
 		&f.rentalRate,
 		&f.length,
