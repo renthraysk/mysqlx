@@ -198,7 +198,7 @@ readColumnMetaData:
 		} else {
 			cmd = new(columnMetaData)
 		}
-		if err := cmd.Unmarshal(r.last.b); err != nil {
+		if err := cmd.unmarshal(r.last.b); err != nil {
 			return nil, err
 		}
 		r.columns = append(r.columns, cmd)
@@ -233,7 +233,6 @@ func (c *conn) Close() error {
 	if c.netConn == nil {
 		return nil
 	}
-
 	ctx := context.Background()
 
 	err := c.send(ctx, msg.ConnectionClose(c.buf[:0]))

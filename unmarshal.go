@@ -6,19 +6,19 @@ import (
 	"time"
 )
 
-func dateTimeToTimeDate(b []byte) (interface{}, error) {
+func unmarshalDateTime(b []byte) (time.Time, error) {
 	year, i := binary.Uvarint(b)
 	if i <= 0 {
-		return nil, fmt.Errorf("failed to decode datetime year (%#v)", b)
+		return time.Time{}, fmt.Errorf("failed to decode datetime year (%x)", b)
 	}
 	month, j := binary.Uvarint(b[i:])
 	if j <= 0 {
-		return nil, fmt.Errorf("failed to decode datetime month (%#v)", b)
+		return time.Time{}, fmt.Errorf("failed to decode datetime month (%x)", b)
 	}
 	i += j
 	day, j := binary.Uvarint(b[i:])
 	if j <= 0 {
-		return nil, fmt.Errorf("failed to decode datetime day (%#v)", b)
+		return time.Time{}, fmt.Errorf("failed to decode datetime day (%x)", b)
 	}
 	i += j
 
@@ -38,13 +38,12 @@ func dateTimeToTimeDate(b []byte) (interface{}, error) {
 		}
 	}
 	if j < 0 {
-		return nil, fmt.Errorf("failed to decode datetime time (%#v)", b)
+		return time.Time{}, fmt.Errorf("failed to decode datetime time (%x)", b)
 	}
-
 	return time.Date(int(year), time.Month(month), int(day), int(hour), int(min), int(sec), int(usec)*1000, time.UTC), nil
 }
 
-func decimalToString(b []byte) (string, error) {
+func unmarshalDecimal(b []byte) (string, error) {
 	if len(b) < 2 {
 		return "", fmt.Errorf("failed to parse decimal %#v", b)
 	}

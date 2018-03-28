@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 
@@ -41,24 +42,24 @@ func (r *rows) Close() error {
 
 func (r *rows) Columns() []string {
 	if r.names == nil {
-		r.names = make([]string, len(c))
+		r.names = make([]string, len(r.columns))
 		for index, column := range r.columns {
 			r.names[index] = column.name
 		}
 	}
-	return names
+	return r.names
 }
 
 func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
 	return r.columns[index].fieldType.String()
 }
 
-func (r *rows) ColumnTypeLength(index int) (length int64, ok bool) {
-	return int64(r.columns[index].length), c[index].hasLength
+func (r *rows) ColumnTypeLength(index int) (int64, bool) {
+	return int64(r.columns[index].length), r.columns[index].hasLength
 }
 
-func (r *rows) ColumnTypeNullable(index int) (nullable, ok bool) {
-	return r.columns[index].Nullable()
+func (r *rows) ColumnTypeNullable(index int) (bool, bool) {
+	return r.columns[index].nullable()
 }
 
 func (r *rows) Next(values []driver.Value) error {
@@ -139,15 +140,15 @@ func (r *rows) unmarshalValues(b []byte, values []driver.Value) error {
 				return io.ErrUnexpectedEOF
 			}
 			switch column := r.columns[index]; column.fieldType {
-			case mysqlx_resultset.ColumnMetaData_SINT:
-				v, nn := binary.Varint(b[i:j])
+			case mysqlx_resultset.ColumnMetaData_UINT:
+				v, nn := binary.Uvarint(b[i:j])
 				if nn <= 0 {
 					return io.ErrUnexpectedEOF
 				}
 				values[index] = v
 
-			case mysqlx_resultset.ColumnMetaData_UINT:
-				v, nn := binary.Uvarint(b[i:j])
+			case mysqlx_resultset.ColumnMetaData_SINT:
+				v, nn := binary.Varint(b[i:j])
 				if nn <= 0 {
 					return io.ErrUnexpectedEOF
 				}
@@ -169,25 +170,25 @@ func (r *rows) unmarshalValues(b []byte, values []driver.Value) error {
 				values[index] = math.Float32frombits(binary.LittleEndian.Uint32(b[i:j]))
 
 			case mysqlx_resultset.ColumnMetaData_DATETIME:
-				v, err := dateTimeToTimeDate(b[i:j])
+				t, err := unmarshalDateTime(b[i:j])
 				if err != nil {
 					return err
 				}
-				values[index] = v
+				values[index] = t
 
 			case mysqlx_resultset.ColumnMetaData_DECIMAL:
-				v, err := decimalToString(b[i:j])
+				d, err := unmarshalDecimal(b[i:j])
 				if err != nil {
 					return err
 				}
-				values[index] = v
+				values[index] = d
 
 			case mysqlx_resultset.ColumnMetaData_ENUM:
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_SET:
 				// @TODO
-				values[index] = b[i : j-1]
+				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_TIME:
 				// @TODO
@@ -209,6 +210,12 @@ func (r *rows) unmarshalValues(b []byte, values []driver.Value) error {
 				}
 				i += uint64(nn)
 			}
+
+			switch tag >> 3 {
+			case tagRowValue:
+				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
+			}
+
 			switch tag & 7 {
 			case proto.WireVarint:
 				_, nn = binary.Uvarint(b[i:])

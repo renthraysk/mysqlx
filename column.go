@@ -2,6 +2,7 @@ package mysqlx
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 
 	"github.com/golang/protobuf/proto"
@@ -54,11 +55,11 @@ func (c *columnMetaData) isBinary() bool {
 	return c.fieldType == mysqlx_resultset.ColumnMetaData_BYTES && c.hasCollation && c.collation.IsBinary()
 }
 
-func (c *columnMetaData) Nullable() (bool, bool) {
+func (c *columnMetaData) nullable() (bool, bool) {
 	return c.flags&columnFlagNotNull == 0, c.hasFlags
 }
 
-func (c *columnMetaData) Unmarshal(b []byte) error {
+func (c *columnMetaData) unmarshal(b []byte) error {
 	var nn int
 
 	c.reset()
@@ -125,6 +126,19 @@ func (c *columnMetaData) Unmarshal(b []byte) error {
 				}
 				i += uint64(nn)
 			}
+
+			switch tag >> 3 {
+			case tagColumnMetaDataName:
+				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
+
+			case tagColumnMetaDataType,
+				tagColumnMetaDataCollation,
+				tagColumnMetaDataFractionalDigits,
+				tagColumnMetaDataLength,
+				tagColumnMetaDataFlags:
+				return fmt.Errorf("Wrong wire type: expected VARINT, got %d", tag&7)
+			}
+
 			switch tag & 7 {
 			case proto.WireVarint:
 				_, nn = binary.Uvarint(b[i:])
@@ -151,26 +165,4 @@ func (c *columnMetaData) Unmarshal(b []byte) error {
 	}
 
 	return nil
-}
-
-type columns []*columnMetaData
-
-func (c columns) Columns() []string {
-	names := make([]string, len(c))
-	for index, column := range c {
-		names[index] = column.name
-	}
-	return names
-}
-
-func (c columns) ColumnTypeDatabaseTypeName(index int) string {
-	return c[index].fieldType.String()
-}
-
-func (c columns) ColumnTypeLength(index int) (length int64, ok bool) {
-	return int64(c[index].length), c[index].hasLength
-}
-
-func (c columns) ColumnTypeNullable(index int) (nullable, ok bool) {
-	return c[index].Nullable()
 }
