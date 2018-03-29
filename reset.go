@@ -18,5 +18,5 @@ func hardSessionResetter(ctx context.Context, c *conn) error {
 	if err := c.send(ctx, msg.SessionReset(c.buf[:0])); err != nil {
 		return errors.Wrap(err, "failed to reset")
 	}
-	return c.authenticate(ctx, c.connector.authentication)
+	return c.authenticate(ctx)
 }

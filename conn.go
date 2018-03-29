@@ -317,8 +317,8 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 	return nil
 }
 
-func (c *conn) authenticate(ctx context.Context, starter authentication.Starter) error {
-	err := c.authenticate2(ctx, starter)
+func (c *conn) authenticate(ctx context.Context) error {
+	err := c.authenticate2(ctx, c.connector.authentication)
 	if err == nil {
 		return nil
 	}

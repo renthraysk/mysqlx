@@ -155,7 +155,7 @@ func (cnn *Connector) connect(ctx context.Context) (Conn, error) {
 		}
 	}
 
-	if err := conn.authenticate(ctx, cnn.authentication); err != nil {
+	if err := conn.authenticate(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to authenticate")
 	}
 	return conn, nil
