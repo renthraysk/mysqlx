@@ -2,9 +2,9 @@
 
 Incomplete, and needs refactoring in places.
 
-* DSNs are deliberately not supported. Create a sql.Connector with mysqlx.New() and use go 1.10 sql.OpenDB().
-* Beware some protobuf serialization and unserialization are hand coded, to reduce allocations.
-
+* DSNs are deliberately not supported. Create a sql.Connector with mysqlx.New() and use go 1.10's sql.OpenDB().
+* Beware some protobuf marshalling (StmtExecute, CapabilitiesSet, AuthenticateStart & AuthenticateContinue) and unmarshalling (ColumnMetaData & Row) is hand coded, to reduce allocations.
+* TLS is not negotiated, have to explicitly enable using mysqlx.WithTLSConfig() when creating the connector.
 
 ## Required mysql plugins.
 
