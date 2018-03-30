@@ -23,7 +23,7 @@ func (auth) Continue(buf []byte, credentials authentication.Credentials, authDat
 
 	n := len(credentials.Database()) + 1 + len(credentials.UserName()) + 1 + 2*sha256.Size
 
-	// Slice off some bytes for computing the authenication data
+	// Slice off some bytes for computing the authentication data
 	buf, ad := slice.Allocate(buf, n)
 
 	i := copy(ad, credentials.Database())
