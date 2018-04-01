@@ -36,7 +36,7 @@ const (
 	tagStmtExecuteCompactMetadata = 4
 )
 
-// Serialised representation of the StmtExecute protobuf message.
+// StmtExecute is a builder and sender of StmtExecute proto message
 type StmtExecute []byte
 
 // NewStmtExecute creates a new StmtExecute which attempts to use the unused capacity of buf.
@@ -51,6 +51,7 @@ func NewStmtExecute(buf []byte, stmt string) StmtExecute {
 	return StmtExecute(b)
 }
 
+// WriteTo writes protobuf marshalled data to w, implementation of Msg interface
 func (s StmtExecute) WriteTo(w io.Writer) (int64, error) {
 	binary.LittleEndian.PutUint32(s, uint32(len(s)-4))
 	n, err := w.Write(s)
@@ -68,22 +69,22 @@ func (s *StmtExecute) SetNamespace(namespace string) {
 	copy(b[1+i:], namespace)
 }
 
-func (s *StmtExecute) setCompactMetadata() {
-	*s = append(*s, tagStmtExecuteCompactMetadata<<3|proto.WireVarint, 1)
-}
-
+// AppendArgUint appends an uint64 parameter
 func (s *StmtExecute) AppendArgUint(v uint64) {
 	*s = appendAnyUint(*s, tagStmtExecuteArgs, v)
 }
 
+// AppendArgInt appends an int64 parameter
 func (s *StmtExecute) AppendArgInt(v int64) {
 	*s = appendAnyInt(*s, tagStmtExecuteArgs, v)
 }
 
+// AppendArgOctets appends a binary parameter
 func (s *StmtExecute) AppendArgOctets(o []byte) {
 	*s = appendAnyOctets(*s, tagStmtExecuteArgs, o)
 }
 
+// AppendArgTime appends a time parameter
 func (s *StmtExecute) AppendArgTime(t time.Time) {
 	const fmt = "2006-01-02 15:04:05.999999999"
 	var b [len(fmt) + 16]byte
@@ -91,22 +92,27 @@ func (s *StmtExecute) AppendArgTime(t time.Time) {
 	s.AppendArgOctets(t.AppendFormat(b[:0], fmt))
 }
 
+// AppendArgString appends a string parameter
 func (s *StmtExecute) AppendArgString(str string) {
 	*s = appendAnyString(*s, tagStmtExecuteArgs, str)
 }
 
+// AppendArgFloat64 appends a float64 parameter
 func (s *StmtExecute) AppendArgFloat64(f float64) {
 	*s = appendAnyFloat64(*s, tagStmtExecuteArgs, f)
 }
 
+// AppendArgFloat32 appends a float32 parameter
 func (s *StmtExecute) AppendArgFloat32(f float32) {
 	*s = appendAnyFloat32(*s, tagStmtExecuteArgs, f)
 }
 
+// AppendArgBool appends a boolean parameter
 func (s *StmtExecute) AppendArgBool(b bool) {
 	*s = appendAnyBool(*s, tagStmtExecuteArgs, b)
 }
 
+// AppendArgNull appends a NULL parameter
 func (s *StmtExecute) AppendArgNull() {
 	*s = appendAnyNull(*s, tagStmtExecuteArgs)
 }

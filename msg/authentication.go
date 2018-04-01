@@ -20,8 +20,10 @@ const (
 	tagAuthenticateContinueAuthData = 1
 )
 
+// AuthenticateStart builds and sends a AuthenticateStart protobuf message
 type AuthenticateStart []byte
 
+// NewAuthenticateStart marshals a AuthenticateStart protobuf message
 func NewAuthenticateStart(buf []byte, mechName string) AuthenticateStart {
 	n := len(mechName)
 	i := SizeVarint(uint64(n))
@@ -33,12 +35,14 @@ func NewAuthenticateStart(buf []byte, mechName string) AuthenticateStart {
 	return AuthenticateStart(b)
 }
 
+// WriteTo writes the AuthenticateStart message to the w, implementation of Msg interface
 func (a AuthenticateStart) WriteTo(w io.Writer) (int64, error) {
 	binary.LittleEndian.PutUint32(a, uint32(len(a)-4))
 	n, err := w.Write(a)
 	return int64(n), err
 }
 
+// SetAuthData sets the optional authentication data, only used for plain authentication mechanism.
 func (a *AuthenticateStart) SetAuthData(authData []byte) {
 	n := len(authData)
 	i := SizeVarint(uint64(n))
@@ -49,6 +53,7 @@ func (a *AuthenticateStart) SetAuthData(authData []byte) {
 	copy(b[1+i:], authData)
 }
 
+// NewAuthenticateContinue marshals AuthenticateContinue protobuf message
 func NewAuthenticateContinue(buf []byte, authData []byte) Msg {
 	n := len(authData)
 	i := SizeVarint(uint64(n))

@@ -12,6 +12,7 @@ const (
 	tagCapabilityValue = 2
 )
 
+// NewCapabilitySetTLSEnable returns a Msg to send to mysql to enable TLS
 func NewCapabilitySetTLSEnable(buf []byte) Msg {
 	buf = append(buf, 0, 0, 0, 0, byte(mysqlx.ClientMessages_CON_CAPABILITIES_SET),
 		1<<3|proto.WireBytes, 17,
