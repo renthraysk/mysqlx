@@ -90,7 +90,7 @@ func (r *rows) Next(values []driver.Value) error {
 		}
 
 	case mysqlx.ServerMessages_RESULTSET_ROW:
-		err := r.unmarshalValues(r.last.b, values)
+		err := r.unmarshalRow(r.last.b, values)
 		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
 		return err
 	}
@@ -99,7 +99,7 @@ func (r *rows) Next(values []driver.Value) error {
 }
 
 // unmarshalValues parses mysqlx_resultset Row protobuf
-func (r *rows) unmarshalValues(b []byte, values []driver.Value) error {
+func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 	var j uint64
 	var nn int
 
