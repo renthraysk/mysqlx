@@ -98,7 +98,7 @@ func (r *rows) Next(values []driver.Value) error {
 	return nil
 }
 
-// unmarshalValues parses mysqlx_resultset Row protobuf
+// unmarshalRow parses mysqlx_resultset Row protobuf
 func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 	var j uint64
 	var nn int
