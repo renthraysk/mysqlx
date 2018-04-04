@@ -157,6 +157,8 @@ func (c *columnMetaData) unmarshal(b []byte) error {
 				i += l
 			case proto.WireFixed32:
 				i += 4
+			default:
+				return fmt.Errorf("Unknown wire type (%d)", tag&7)
 			}
 		}
 	}

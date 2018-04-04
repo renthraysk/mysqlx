@@ -234,6 +234,8 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				i += j
 			case proto.WireFixed32:
 				i += 4
+			default:
+				return fmt.Errorf("Unknown wire type (%d)", tag&7)
 			}
 		}
 	}
