@@ -155,6 +155,24 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = v
 
 			case mysqlx_resultset.ColumnMetaData_BYTES:
+				if column.hasContentType {
+					// contentType is defined as a uint32 in mysqlx_resultset.proto
+					// But the enum of possible values is assigned type int32 by protoc
+					switch column.contentType {
+					case uint32(mysqlx_resultset.ContentType_BYTES_GEOMETRY):
+						values[index] = b[i : j-1 : j-1]
+
+					case uint32(mysqlx_resultset.ContentType_BYTES_JSON):
+						values[index] = b[i : j-1 : j-1]
+
+					case uint32(mysqlx_resultset.ContentType_BYTES_XML):
+						values[index] = b[i : j-1 : j-1]
+
+					default:
+						values[index] = b[i : j-1 : j-1]
+					}
+					break
+				}
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_DOUBLE:

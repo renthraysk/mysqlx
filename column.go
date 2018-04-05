@@ -29,7 +29,8 @@ const (
 )
 
 type columnMetaData struct {
-	fieldType         mysqlx_resultset.ColumnMetaData_FieldType
+	fieldType mysqlx_resultset.ColumnMetaData_FieldType
+
 	name              string
 	hasFlags          bool
 	flags             uint32
@@ -40,6 +41,8 @@ type columnMetaData struct {
 	hasPrecisionScale bool
 	precision         int64
 	scale             int64
+	hasContentType    bool
+	contentType       uint32
 }
 
 func (c *columnMetaData) reset() {
@@ -49,6 +52,7 @@ func (c *columnMetaData) reset() {
 	c.hasLength = false
 	c.hasPrecisionScale = false
 	c.hasCollation = false
+	c.hasContentType = false
 }
 
 func (c *columnMetaData) isBinary() bool {
@@ -117,6 +121,16 @@ func (c *columnMetaData) unmarshal(b []byte) error {
 			c.hasFlags = true
 			c.flags = uint32(flags)
 			i += uint64(nn)
+
+		case tagColumnMetaDataContentType<<3 | proto.WireVarint:
+			contentType, nn := binary.Uvarint(b[i:])
+			if nn <= 0 {
+				return io.ErrUnexpectedEOF
+			}
+			c.hasContentType = true
+			c.contentType = uint32(contentType)
+			i += uint64(nn)
+
 		default:
 			if tag > 0x7F {
 				i--
