@@ -187,14 +187,28 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_SET:
-				// @TODO
-				values[index] = b[i : j-1 : j-1]
+				s, err := unmarshalSet(b[i : j-1])
+				if err != nil {
+					return err
+				}
+				values[index] = s
 
 			case mysqlx_resultset.ColumnMetaData_TIME:
-				// @TODO
+				t, err := unmarshalTime(b[i : j-1])
+				if err != nil {
+					return err
+				}
+				values[index] = t
 
 			case mysqlx_resultset.ColumnMetaData_BIT:
-				// @TODO
+				bit, err := unmarshalBit(b[i : j-1])
+				if err != nil {
+					return err
+				}
+				values[index] = bit
+
+			default:
+				return fmt.Errorf("unknown mysqlx column type %d", column.fieldType)
 			}
 			i = j
 			// Next column

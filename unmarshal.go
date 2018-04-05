@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 func unmarshalDateTime(b []byte) (time.Time, error) {
@@ -82,4 +84,16 @@ func unmarshalDecimal(b []byte) (string, error) {
 		r[i] = '.'
 	}
 	return string(r), nil
+}
+
+func unmarshalSet(b []byte) ([]string, error) {
+	return nil, errors.New("unimplemented SET unmarshalling")
+}
+
+func unmarshalTime(b []byte) (interface{}, error) {
+	return nil, errors.New("unimplemnted TIME unmarshalling")
+}
+
+func unmarshalBit(b []byte) (interface{}, error) {
+	return nil, errors.New("unimplemnted BIT unmarshalling")
 }
