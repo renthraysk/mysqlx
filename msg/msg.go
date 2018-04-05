@@ -5,6 +5,11 @@ import (
 	"io"
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
+	"github.com/renthraysk/mysqlx/slice"
+)
+
+const (
+	HeaderSize = 5
 )
 
 // Msg generic interface for client to server messages.
@@ -23,12 +28,14 @@ func (m msg) WriteTo(w io.Writer) (int64, error) {
 
 // ConnectionClose appends the client close message to buf, and returns Msg to send to server
 func ConnectionClose(buf []byte) Msg {
-	buf = append(buf, 0, 0, 0, 0, byte(mysqlx.ClientMessages_CON_CLOSE))
-	return msg(buf[len(buf)-5:])
+	_, b := slice.Allocate(buf, HeaderSize)
+	b[4] = byte(mysqlx.ClientMessages_CON_CLOSE)
+	return msg(b)
 }
 
 // SessionReset appends the client session reset message to buf, and returns Msg to send to server
 func SessionReset(buf []byte) Msg {
-	buf = append(buf, 0, 0, 0, 0, byte(mysqlx.ClientMessages_SESS_RESET))
-	return msg(buf[len(buf)-5:])
+	_, b := slice.Allocate(buf, HeaderSize)
+	b[4] = byte(mysqlx.ClientMessages_SESS_RESET)
+	return msg(b)
 }
