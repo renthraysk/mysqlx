@@ -32,9 +32,7 @@ type queryMsgExecuter interface {
 type Conn interface {
 	driver.Conn
 
-	driver.Execer
-	driver.Queryer
-
+	driver.ConnPrepareContext
 	driver.QueryerContext
 	driver.ExecerContext
 	driver.ConnBeginTx
@@ -146,14 +144,6 @@ readExecResponse:
 	return nil, nil
 }
 
-func (c *conn) Exec(stmt string, args []driver.Value) (driver.Result, error) {
-	s, err := msg.StmtValues(c.buf[:0], stmt, args)
-	if err != nil {
-		return nil, err
-	}
-	return c.execMsg(context.Background(), s)
-}
-
 func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Result, error) {
 	s, err := msg.StmtNamedValues(c.buf[:0], stmt, args)
 	if err != nil {
@@ -209,14 +199,6 @@ readColumnMetaData:
 	return r, nil
 }
 
-func (c *conn) Query(stmt string, args []driver.Value) (driver.Rows, error) {
-	s, err := msg.StmtValues(c.buf[:0], stmt, args)
-	if err != nil {
-		return nil, err
-	}
-	return c.queryMsg(context.Background(), s)
-}
-
 func (c *conn) QueryContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Rows, error) {
 	s, err := msg.StmtNamedValues(c.buf[:0], stmt, args)
 	if err != nil {
@@ -225,8 +207,13 @@ func (c *conn) QueryContext(ctx context.Context, stmt string, args []driver.Name
 	return c.queryMsg(ctx, s)
 }
 
+func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
+	return c.connector.stmtPreparer(ctx, c, query)
+}
+
+// Prepare driver.Conn interface forces this deprecated implementation
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
-	return c.connector.stmtPreparer(c, query)
+	return c.connector.stmtPreparer(context.Background(), c, query)
 }
 
 func (c *conn) Close() error {
@@ -284,8 +271,9 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 	return &tx{c}, nil
 }
 
+// Begin driver.Conn interface forces this deprecated implementation
 func (c *conn) Begin() (driver.Tx, error) {
-	if _, err := c.Exec("START TRANSACTION", nil); err != nil {
+	if _, err := c.ExecContext(context.Background(), "START TRANSACTION", nil); err != nil {
 		return nil, err
 	}
 	return &tx{c}, nil

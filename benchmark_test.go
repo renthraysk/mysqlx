@@ -10,7 +10,7 @@ func BenchmarkSimpleExec(b *testing.B) {
 	db := NewDB(b)
 	defer db.Close()
 	for i := 0; i < b.N; i++ {
-		if _, err := db.Exec("DO 1"); err != nil {
+		if _, err := db.ExecContext(context.Background(), "DO 1"); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -18,28 +18,21 @@ func BenchmarkSimpleExec(b *testing.B) {
 
 func BenchmarkPreparedExec(b *testing.B) {
 	b.ReportAllocs()
-	db := NewDB(b)
+	db := NewDBFatalErrors(b)
 	defer db.Close()
-	stmt, err := db.Prepare("DO 1")
-	if err != nil {
-		b.Fatal(err)
-	}
+	stmt, _ := db.PrepareContext(context.Background(), "DO 1")
 	for i := 0; i < b.N; i++ {
-		if _, err := stmt.Exec(); err != nil {
-			b.Fatal(err)
-		}
+		stmt.Exec()
 	}
 }
 
 func BenchmarkSimpleQueryRow(b *testing.B) {
 	b.ReportAllocs()
-	db := NewDB(b)
+	db := NewDBFatalErrors(b)
 	defer db.Close()
 	var num int
 	for i := 0; i < b.N; i++ {
-		if err := db.QueryRow("SELECT 1").Scan(&num); err != nil {
-			b.Fatal(err)
-		}
+		db.QueryRowContext(context.Background(), "SELECT 1").Scan(&num)
 	}
 }
 
@@ -59,15 +52,11 @@ func BenchmarkConnectAuthentication(b *testing.B) {
 func BenchmarkQueryNoScan(b *testing.B) {
 	b.ReportAllocs()
 
-	db := NewDB(b)
+	db := NewDBFatalErrors(b)
 	defer db.Close()
 
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query(SelectAll)
-		if err != nil {
-			b.Fatalf("query failed: %s", err)
-		}
-
+		rows, _ := db.QueryContext(context.Background(), SelectAll)
 		if err := rows.Err(); err != nil {
 			b.Fatalf("rows error: %+v", err)
 		}
@@ -76,18 +65,14 @@ func BenchmarkQueryNoScan(b *testing.B) {
 }
 
 func BenchmarkQueryScan(b *testing.B) {
+	var f film
+
 	b.ReportAllocs()
 
-	db := NewDB(b)
+	db := NewDBFatalErrors(b)
 	defer db.Close()
 	for i := 0; i < b.N; i++ {
-		rows, err := db.Query(SelectAll)
-		if err != nil {
-			b.Fatalf("query failed: %s", err)
-		}
-
-		var f film
-
+		rows, _ := db.QueryContext(context.Background(), SelectAll)
 		for rows.Next() {
 			if err := f.Scan(rows); err != nil {
 				b.Fatalf("scan failed: %s", err)

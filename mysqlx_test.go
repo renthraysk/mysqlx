@@ -8,7 +8,7 @@ import (
 )
 
 func TestBeginTx(t *testing.T) {
-	t.Skipf("Can't determine current transaction's isolation level: https://bugs.mysql.com/bug.php?id=53341")
+	t.Skipf("Can not determine current transaction's isolation level: https://bugs.mysql.com/bug.php?id=53341")
 
 	isos := map[sql.IsolationLevel]string{
 		sql.LevelReadUncommitted: "READ-UNCOMMITTED",
@@ -17,7 +17,7 @@ func TestBeginTx(t *testing.T) {
 		sql.LevelSerializable:    "SERIALIZABLE",
 	}
 
-	db := NewDB(t)
+	db := NewDBFatalErrors(t)
 	defer db.Close()
 
 	for level, name := range isos {
@@ -84,24 +84,19 @@ func (f *film) Scan(rows *sql.Rows) error {
 }
 
 func TestQuery(t *testing.T) {
-
-	db := NewDB(t)
-	defer db.Close()
-
-	rows, err := db.Query(SelectAll)
-	if err != nil {
-		t.Fatalf("query failed: %s", err)
-	}
-
 	var f film
 
+	db := NewDBFatalErrors(t)
+	defer db.Close()
+
+	rows, _ := db.QueryContext(context.Background(), SelectAll)
 	for rows.Next() {
 		if err := f.Scan(rows); err != nil {
 			t.Fatalf("scan failed: %s", err)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		t.Fatalf("rows error: %+v", err)
+		t.Fatalf("rows error: %s", err)
 	}
 
 	rows.Close()
