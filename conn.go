@@ -216,12 +216,10 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 	return c.connector.stmtPreparer(context.Background(), c, query)
 }
 
-func (c *conn) Close() error {
+func (c *conn) CloseContext(ctx context.Context) error {
 	if c.netConn == nil {
 		return nil
 	}
-	ctx := context.Background()
-
 	err := c.send(ctx, msg.ConnectionClose(c.buf[:0]))
 	_, _, _ = c.readMessage(ctx)
 
@@ -231,6 +229,10 @@ func (c *conn) Close() error {
 		return err
 	}
 	return errClose
+}
+
+func (c *conn) Close() error {
+	return c.CloseContext(context.Background())
 }
 
 func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx, error) {
