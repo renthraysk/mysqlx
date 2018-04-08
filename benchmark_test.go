@@ -48,39 +48,3 @@ func BenchmarkConnectAuthentication(b *testing.B) {
 		c.Close()
 	}
 }
-
-func BenchmarkQueryNoScan(b *testing.B) {
-	b.ReportAllocs()
-
-	db := NewDBFatalErrors(b)
-	defer db.Close()
-
-	for i := 0; i < b.N; i++ {
-		rows, _ := db.QueryContext(context.Background(), SelectAll)
-		if err := rows.Err(); err != nil {
-			b.Fatalf("rows error: %+v", err)
-		}
-		rows.Close()
-	}
-}
-
-func BenchmarkQueryScan(b *testing.B) {
-	var f film
-
-	b.ReportAllocs()
-
-	db := NewDBFatalErrors(b)
-	defer db.Close()
-	for i := 0; i < b.N; i++ {
-		rows, _ := db.QueryContext(context.Background(), SelectAll)
-		for rows.Next() {
-			if err := f.Scan(rows); err != nil {
-				b.Fatalf("scan failed: %s", err)
-			}
-		}
-		if err := rows.Err(); err != nil {
-			b.Fatalf("rows error: %+v", err)
-		}
-		rows.Close()
-	}
-}

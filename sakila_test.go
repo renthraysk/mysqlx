@@ -7,7 +7,27 @@ import (
 	"time"
 )
 
-const SelectAll = `SELECT 
+func NewSakilaConnector(tb testing.TB) *Connector {
+	tb.Helper()
+
+	connector, err := New("tcp", ipAddress, WithUserPassword("usernative", "passwordnative"), WithDatabase("sakila"))
+	if err != nil {
+		tb.Fatalf("creating connector failed: %s", err)
+	}
+	return connector
+}
+
+func NewSakilaDB(tb testing.TB) *sql.DB {
+	tb.Helper()
+	return sql.OpenDB(NewSakilaConnector(tb))
+}
+
+func NewSakilaDBFatal(tb testing.TB) DB {
+	tb.Helper()
+	return &DBFatal{NewSakilaDB(tb), tb}
+}
+
+const SelectAllFilms = `SELECT 
 	film_id,
     title,
     description,
@@ -60,10 +80,10 @@ func (f *film) Scan(rows *sql.Rows) error {
 func TestSakilaFilmQuery(t *testing.T) {
 	var f film
 
-	db := NewDBFatalErrors(t)
+	db := NewSakilaDBFatal(t)
 	defer db.Close()
 
-	rows, _ := db.QueryContext(context.Background(), SelectAll)
+	rows, _ := db.QueryContext(context.Background(), SelectAllFilms)
 	for rows.Next() {
 		if err := f.Scan(rows); err != nil {
 			t.Fatalf("scan failed: %s", err)
@@ -72,6 +92,41 @@ func TestSakilaFilmQuery(t *testing.T) {
 	if err := rows.Err(); err != nil {
 		t.Fatalf("rows error: %s", err)
 	}
-
 	rows.Close()
+}
+
+func BenchmarkQueryAllFilmsNoScan(b *testing.B) {
+	b.ReportAllocs()
+
+	db := NewSakilaDBFatal(b)
+	defer db.Close()
+
+	for i := 0; i < b.N; i++ {
+		rows, _ := db.QueryContext(context.Background(), SelectAllFilms)
+		if err := rows.Err(); err != nil {
+			b.Fatalf("rows error: %+v", err)
+		}
+		rows.Close()
+	}
+}
+
+func BenchmarkQueryAllFilmsScan(b *testing.B) {
+	var f film
+
+	b.ReportAllocs()
+
+	db := NewSakilaDBFatal(b)
+	defer db.Close()
+	for i := 0; i < b.N; i++ {
+		rows, _ := db.QueryContext(context.Background(), SelectAllFilms)
+		for rows.Next() {
+			if err := f.Scan(rows); err != nil {
+				b.Fatalf("scan failed: %s", err)
+			}
+		}
+		if err := rows.Err(); err != nil {
+			b.Fatalf("rows error: %+v", err)
+		}
+		rows.Close()
+	}
 }
