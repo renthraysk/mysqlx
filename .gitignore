@@ -1,3 +1,5 @@
 *.prof
 .vscode/
 *.test
+*.log
+*.out
