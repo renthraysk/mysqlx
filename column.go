@@ -80,6 +80,7 @@ func (c *columnMetaData) unmarshal(b []byte) error {
 			}
 			c.fieldType = mysqlx_resultset.ColumnMetaData_FieldType(fieldType)
 			i += uint64(nn)
+
 		case tagColumnMetaDataName<<3 | proto.WireBytes:
 			j, nn := binary.Uvarint(b[i:])
 			if nn <= 0 {
@@ -92,6 +93,7 @@ func (c *columnMetaData) unmarshal(b []byte) error {
 			}
 			c.name = string(b[i:j])
 			i = j
+
 		case tagColumnMetaDataCollation<<3 | proto.WireVarint:
 			collation, nn := binary.Uvarint(b[i:])
 			if nn <= 0 {
@@ -100,11 +102,12 @@ func (c *columnMetaData) unmarshal(b []byte) error {
 			c.hasCollation = true
 			c.collation = Collation(collation)
 			i += uint64(nn)
+
 		case tagColumnMetaDataFractionalDigits<<3 | proto.WireVarint:
 			_, nn = binary.Uvarint(b[i:])
-
 			// @TODO
 			i += uint64(nn)
+
 		case tagColumnMetaDataLength<<3 | proto.WireVarint:
 			length, nn := binary.Uvarint(b[i:])
 			if nn <= 0 {
@@ -113,6 +116,7 @@ func (c *columnMetaData) unmarshal(b []byte) error {
 			c.hasLength = true
 			c.length = uint32(length)
 			i += uint64(nn)
+
 		case tagColumnMetaDataFlags<<3 | proto.WireVarint:
 			flags, nn := binary.Uvarint(b[i:])
 			if nn <= 0 {
