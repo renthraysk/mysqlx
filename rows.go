@@ -68,6 +68,10 @@ func (r *rows) Next(values []driver.Value) error {
 		return r.last.err
 	}
 	switch r.last.t {
+	case mysqlx.ServerMessages_RESULTSET_ROW:
+		err := r.unmarshalRow(r.last.b, values)
+		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
+		return err
 
 	case mysqlx.ServerMessages_ERROR:
 		r.last.err = newError(r.last.b)
@@ -89,10 +93,6 @@ func (r *rows) Next(values []driver.Value) error {
 			return io.EOF
 		}
 
-	case mysqlx.ServerMessages_RESULTSET_ROW:
-		err := r.unmarshalRow(r.last.b, values)
-		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
-		return err
 	}
 
 	return nil
@@ -155,24 +155,26 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = v
 
 			case mysqlx_resultset.ColumnMetaData_BYTES:
-				if column.hasContentType {
-					// contentType is defined as a uint32 in mysqlx_resultset.proto
-					// But the enum of possible values is assigned type int32 by protoc
-					switch column.contentType {
-					case uint32(mysqlx_resultset.ContentType_BYTES_GEOMETRY):
-						values[index] = b[i : j-1 : j-1]
+				/*
+					if column.hasContentType {
+						// contentType is defined as a uint32 in mysqlx_resultset.proto
+						// But the enum of possible values is assigned type int32 by protoc
+						switch column.contentType {
+						case uint32(mysqlx_resultset.ContentType_BYTES_GEOMETRY):
+							values[index] = b[i : j-1 : j-1]
 
-					case uint32(mysqlx_resultset.ContentType_BYTES_JSON):
-						values[index] = b[i : j-1 : j-1]
+						case uint32(mysqlx_resultset.ContentType_BYTES_JSON):
+							values[index] = b[i : j-1 : j-1]
 
-					case uint32(mysqlx_resultset.ContentType_BYTES_XML):
-						values[index] = b[i : j-1 : j-1]
+						case uint32(mysqlx_resultset.ContentType_BYTES_XML):
+							values[index] = b[i : j-1 : j-1]
 
-					default:
-						values[index] = b[i : j-1 : j-1]
+						default:
+							values[index] = b[i : j-1 : j-1]
+						}
+						break
 					}
-					break
-				}
+				*/
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_DOUBLE:
@@ -188,6 +190,17 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = math.Float32frombits(binary.LittleEndian.Uint32(b[i:j]))
 
 			case mysqlx_resultset.ColumnMetaData_DATETIME:
+				/*
+					if column.hasContentType {
+						switch column.contentType {
+						case uint32(mysqlx_resultset.ContentType_DATETIME_DATE):
+						case uint32(mysqlx_resultset.ContentType_DATETIME_DATETIME):
+							// Not defined in protobuf
+							const MysqlxColumnFlagsDateTimeTimeStamp = 1
+							if column.hasFlags && column.flags&MysqlxColumnFlagsDateTimeTimeStamp != 0 {
+							}
+						}
+					}*/
 				t, err := unmarshalDateTime(b[i:j])
 				if err != nil {
 					return err
@@ -205,11 +218,7 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_SET:
-				s, err := unmarshalSet(b[i : j-1])
-				if err != nil {
-					return err
-				}
-				values[index] = s
+				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_TIME:
 				t, err := unmarshalTime(b[i : j-1])
