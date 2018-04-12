@@ -35,7 +35,7 @@ func TestAuthentication(t *testing.T) {
 			"tcp",
 			ipAddress,
 			[]Option{
-				WithTLSConfig(tlsConfig),
+				WithTLSConfig(TLSInsecureSkipVerify()),
 				WithAuthentication(native.New()),
 				WithUserPassword("usernative", "passwordnative"),
 			},
@@ -45,7 +45,7 @@ func TestAuthentication(t *testing.T) {
 			"tcp",
 			ipAddress,
 			[]Option{
-				WithTLSConfig(tlsConfig),
+				WithTLSConfig(TLSInsecureSkipVerify()),
 				WithAuthentication(sha256.New()),
 				WithUserPassword("usersha2", "passwordsha2"),
 			},
@@ -55,7 +55,7 @@ func TestAuthentication(t *testing.T) {
 			"tcp",
 			ipAddress,
 			[]Option{
-				WithTLSConfig(tlsConfig),
+				WithTLSConfig(TLSInsecureSkipVerify()),
 				WithAuthentication(sha256.New()),
 				WithUserPassword("usersha256", "passwordsha256"),
 			},
