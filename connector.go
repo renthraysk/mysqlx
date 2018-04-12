@@ -119,10 +119,6 @@ func WithBufferSize(size int) Option {
 
 // Connect is the database/sql.Connector Connect() implementation
 func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
-	return cnn.connect(ctx)
-}
-
-func (cnn *Connector) connect(ctx context.Context) (Conn, error) {
 	netConn, err := cnn.netDialer.DialContext(ctx, cnn.network, cnn.addr)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
@@ -144,6 +140,7 @@ func (cnn *Connector) connect(ctx context.Context) (Conn, error) {
 		if cnn.tlsConfig != nil {
 			s := msg.NewCapabilitySetTLSEnable(conn.buf[:0])
 			if _, err := conn.execMsg(ctx, s); err != nil {
+				netConn.Close()
 				return nil, errors.Wrap(err, "failed to set TLS capability")
 			}
 			tlsConn := tls.Client(conn.netConn, cnn.tlsConfig)
@@ -156,6 +153,7 @@ func (cnn *Connector) connect(ctx context.Context) (Conn, error) {
 	}
 
 	if err := conn.authenticate(ctx); err != nil {
+		conn.Close()
 		return nil, errors.Wrap(err, "failed to authenticate")
 	}
 	return conn, nil
