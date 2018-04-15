@@ -20,31 +20,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type execMsgExecuter interface {
-	execMsg(ctx context.Context, msg msg.Msg) (driver.Result, error)
-}
-
-type queryMsgExecuter interface {
-	queryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error)
-}
-
-// Conn the interface of our driver.Conn plus extra methods
-type Conn interface {
-	driver.Conn
-
-	driver.ConnPrepareContext
-	driver.QueryerContext
-	driver.ExecerContext
-	driver.ConnBeginTx
-	driver.Pinger
-
-	driver.NamedValueChecker
-	driver.SessionResetter
-
-	execMsgExecuter
-	queryMsgExecuter
-}
-
 type conn struct {
 	netConn   net.Conn
 	connector *Connector
@@ -180,18 +155,18 @@ readColumnMetaData:
 
 	case mysqlx.ServerMessages_RESULTSET_COLUMN_META_DATA:
 
-		var cmd *columnMetaData
+		var ct *ColumnType
 
 		n := len(r.columns)
 		if n < len(r.buf) {
-			cmd = &r.buf[n]
+			ct = &r.buf[n]
 		} else {
-			cmd = new(columnMetaData)
+			ct = new(ColumnType)
 		}
-		if err := cmd.unmarshal(r.last.b); err != nil {
+		if err := ct.Unmarshal(r.last.b); err != nil {
 			return nil, err
 		}
-		r.columns = append(r.columns, cmd)
+		r.columns = append(r.columns, ct)
 
 		goto readColumnMetaData
 	}
@@ -322,7 +297,7 @@ func (c *conn) authenticate(ctx context.Context) error {
 			return nil
 		}
 	default:
-		// @TODO Need decide what to do here..
+		// @TODO Need to decide what to do here..
 		// https://dev.mysql.com/doc/refman/8.0/en/x-plugin-sha2-cache-plugin.html
 		// Current feeling is to not allow authentication with sha2 over non secure connections.
 	}

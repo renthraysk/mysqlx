@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
@@ -20,7 +21,7 @@ const (
 
 type rows struct {
 	conn    *conn
-	columns []*columnMetaData
+	columns []*ColumnType
 	last    struct {
 		t   mysqlx.ServerMessages_Type
 		b   []byte
@@ -29,7 +30,7 @@ type rows struct {
 
 	names []string
 
-	buf [16]columnMetaData
+	buf [16]ColumnType
 }
 
 func (r *rows) Close() error {
@@ -44,22 +45,30 @@ func (r *rows) Columns() []string {
 	if r.names == nil {
 		r.names = make([]string, len(r.columns))
 		for index, column := range r.columns {
-			r.names[index] = column.name
+			r.names[index] = column.Name
 		}
 	}
 	return r.names
 }
 
 func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
-	return r.columns[index].fieldType.String()
+	return r.columns[index].DatabaseTypeName
 }
 
 func (r *rows) ColumnTypeLength(index int) (int64, bool) {
-	return int64(r.columns[index].length), r.columns[index].hasLength
+	return r.columns[index].Length, r.columns[index].HasLength
 }
 
 func (r *rows) ColumnTypeNullable(index int) (bool, bool) {
-	return r.columns[index].nullable()
+	return r.columns[index].Nullable, r.columns[index].HasNullable
+}
+
+func (r *rows) ColumnTypePrecisionScale(index int) (int64, int64, bool) {
+	return r.columns[index].Precision, r.columns[index].Scale, r.columns[index].HasPrecisionScale
+}
+
+func (r *rows) ColumnTypeScanType(index int) reflect.Type {
+	return r.columns[index].ScanType
 }
 
 func (r *rows) Next(values []driver.Value) error {
