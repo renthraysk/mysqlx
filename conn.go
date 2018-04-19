@@ -7,6 +7,7 @@ import (
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -14,11 +15,33 @@ import (
 	"github.com/renthraysk/mysqlx/authentication/plain"
 	"github.com/renthraysk/mysqlx/msg"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
+	"github.com/renthraysk/mysqlx/protobuf/mysqlx_notice"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_session"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
+
+type result struct {
+	lastInsertID uint64
+	rowsAffected uint64
+}
+
+var ErrInt64Overflow = errors.New("Value exceeded math.MaxInt64")
+
+func (r *result) LastInsertId() (int64, error) {
+	if r.lastInsertID > math.MaxInt64 {
+		return int64(r.lastInsertID), ErrInt64Overflow
+	}
+	return int64(r.lastInsertID), nil
+}
+
+func (r *result) RowsAffected() (int64, error) {
+	if r.rowsAffected > math.MaxInt64 {
+		return int64(r.rowsAffected), ErrInt64Overflow
+	}
+	return int64(r.rowsAffected), nil
+}
 
 type conn struct {
 	netConn   net.Conn
@@ -92,6 +115,9 @@ func (c *conn) send(ctx context.Context, msg msg.Msg) error {
 }
 
 func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
+
+	r := &result{}
+
 	err := c.send(ctx, m)
 	if err != nil {
 		return nil, err
@@ -112,11 +138,58 @@ readExecResponse:
 		break
 
 	case mysqlx.ServerMessages_NOTICE:
+		var f mysqlx_notice.Frame
+
+		if err := proto.Unmarshal(b, &f); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal Frame")
+		}
+
+		switch f.GetType() {
+		case uint32(mysqlx_notice.Frame_WARNING):
+			var w mysqlx_notice.Warning
+
+			if err := proto.Unmarshal(f.Payload, &w); err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal Warning")
+			}
+
+		case uint32(mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED):
+			var v mysqlx_notice.SessionVariableChanged
+
+			if err := proto.Unmarshal(f.Payload, &v); err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal SessionVariableChanged")
+			}
+
+		case uint32(mysqlx_notice.Frame_SESSION_STATE_CHANGED):
+			var s mysqlx_notice.SessionStateChanged
+
+			if err := proto.Unmarshal(f.Payload, &s); err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal SessionStateChanged")
+			}
+			switch s.GetParam() {
+			case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
+			case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
+			case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
+				if u, ok := ScalarUint(s.Value); ok {
+					r.lastInsertID = u
+				}
+			case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
+				if u, ok := ScalarUint(s.Value); ok {
+					r.rowsAffected = u
+				}
+			case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
+			case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
+			case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
+			case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
+			case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
+			case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
+			}
+		}
 		goto readExecResponse
+
 	default:
 		goto readExecResponse
 	}
-	return nil, nil
+	return r, nil
 }
 
 func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Result, error) {
@@ -217,7 +290,6 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 	if options.ReadOnly {
 		start = "START TRANSACTION READ ONLY"
 	}
-
 	switch sql.IsolationLevel(options.Isolation) {
 	case sql.LevelDefault:
 	case sql.LevelReadUncommitted:

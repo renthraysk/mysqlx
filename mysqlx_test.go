@@ -103,6 +103,42 @@ func TestBytes(t *testing.T) {
 	assert.Equal(t, expected, out)
 }
 
+func TestRowsAffected(t *testing.T) {
+	db := NewDB(t)
+	defer db.Close()
+
+	_, err := db.ExecContext(context.Background(), "CREATE TEMPORARY TABLE rowsAffected(ID INT)")
+	assert.Nil(t, err)
+	{
+		r, err := db.ExecContext(context.Background(), "INSERT INTO rowsAffected VALUES(?)", 42)
+		assert.Nil(t, err)
+		assert.NotNil(t, r)
+
+		n, err := r.RowsAffected()
+		assert.Nil(t, err)
+		assert.Equal(t, n, int64(1))
+	}
+	{
+		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 9)
+		assert.Nil(t, err)
+		assert.NotNil(t, r)
+
+		n, err := r.RowsAffected()
+		assert.Nil(t, err)
+		assert.Equal(t, n, int64(0))
+	}
+	{
+		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 42)
+		assert.Nil(t, err)
+		assert.NotNil(t, r)
+
+		n, err := r.RowsAffected()
+		assert.Nil(t, err)
+		assert.Equal(t, n, int64(1))
+	}
+
+}
+
 func TestBeginTx(t *testing.T) {
 	t.Skip("Can not determine current transaction's isolation level: https://bugs.mysql.com/bug.php?id=53341")
 
