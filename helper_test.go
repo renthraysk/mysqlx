@@ -18,7 +18,8 @@ func NewConnector(tb testing.TB) *Connector {
 	tb.Helper()
 
 	connector, err := New("tcp", ipAddress,
-		WithUserPassword("usernative", "passwordnative"))
+		WithUserPassword("usernative", "passwordnative"),
+		WithDatabase("gotest"))
 	if err != nil {
 		tb.Fatalf("creating connector failed: %s", err)
 	}
