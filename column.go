@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"reflect"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -32,18 +31,15 @@ const (
 )
 
 type ColumnType struct {
-	fieldType        mysqlx_resultset.ColumnMetaData_FieldType
-	Name             string
-	DatabaseTypeName string
+	fieldType mysqlx_resultset.ColumnMetaData_FieldType
+	name      string
 
-	HasNullable       bool
-	Nullable          bool
-	HasLength         bool
-	Length            int64
-	HasPrecisionScale bool
-	Precision         int64
-	Scale             int64
-	ScanType          reflect.Type
+	hasNullable bool
+	nullable    bool
+	hasLength   bool
+	length      int64
+	hasScale    bool
+	scale       int64
 
 	hasCollation   bool
 	collation      Collation
@@ -53,11 +49,11 @@ type ColumnType struct {
 
 func (c *ColumnType) Reset() {
 	c.fieldType = mysqlx_resultset.ColumnMetaData_SINT
-	c.DatabaseTypeName = c.fieldType.String()
-	c.Name = ""
-	c.HasNullable = false
-	c.HasLength = false
-	c.HasPrecisionScale = false
+
+	c.name = ""
+	c.hasNullable = false
+	c.hasLength = false
+	c.hasScale = false
 	c.hasCollation = false
 	c.hasContentType = false
 }
@@ -82,7 +78,6 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			c.fieldType = mysqlx_resultset.ColumnMetaData_FieldType(fieldType)
-			c.DatabaseTypeName = c.fieldType.String()
 			i += uint64(nn)
 
 		case tagColumnMetaDataName<<3 | proto.WireBytes:
@@ -95,7 +90,7 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			if j > n {
 				return io.ErrUnexpectedEOF
 			}
-			c.Name = string(b[i:j])
+			c.name = string(b[i:j])
 			i = j
 
 		case tagColumnMetaDataCollation<<3 | proto.WireVarint:
@@ -112,8 +107,8 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			if nn <= 0 {
 				return io.ErrUnexpectedEOF
 			}
-			c.HasPrecisionScale = true
-			c.Scale = int64(s)
+			c.hasScale = true
+			c.scale = int64(s)
 			i += uint64(nn)
 
 		case tagColumnMetaDataLength<<3 | proto.WireVarint:
@@ -124,8 +119,8 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			if length > math.MaxInt64 {
 				return errors.New("Length exceeds MaxInt64")
 			}
-			c.HasLength = true
-			c.Length = int64(length)
+			c.hasLength = true
+			c.length = int64(length)
 			i += uint64(nn)
 
 		case tagColumnMetaDataFlags<<3 | proto.WireVarint:
@@ -133,8 +128,8 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			if nn <= 0 {
 				return io.ErrUnexpectedEOF
 			}
-			c.HasNullable = true
-			c.Nullable = flags&columnFlagNotNull == 0
+			c.hasNullable = true
+			c.nullable = flags&columnFlagNotNull == 0
 			i += uint64(nn)
 
 		case tagColumnMetaDataContentType<<3 | proto.WireVarint:
@@ -147,15 +142,6 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			i += uint64(nn)
 
 		default:
-			if tag > 0x7F {
-				i--
-				tag, nn = binary.Uvarint(b[i:])
-				if nn <= 0 {
-					return io.ErrUnexpectedEOF
-				}
-				i += uint64(nn)
-			}
-
 			switch tag >> 3 {
 			case tagColumnMetaDataName:
 				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
@@ -166,6 +152,15 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 				tagColumnMetaDataLength,
 				tagColumnMetaDataFlags:
 				return fmt.Errorf("Wrong wire type: expected VARINT, got %d", tag&7)
+			}
+
+			if tag > 0x7F {
+				i--
+				tag, nn = binary.Uvarint(b[i:])
+				if nn <= 0 {
+					return io.ErrUnexpectedEOF
+				}
+				i += uint64(nn)
 			}
 
 			switch tag & 7 {
@@ -194,7 +189,5 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 	if i > n {
 		return io.ErrUnexpectedEOF
 	}
-	c.HasPrecisionScale = c.HasPrecisionScale && c.HasLength
-	c.Precision = c.Length
 	return nil
 }

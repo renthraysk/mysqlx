@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"time"
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
@@ -34,9 +35,20 @@ type rows struct {
 }
 
 func (r *rows) Close() error {
-	for r.last.err == nil && r.last.t != mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK {
+readUntilOkOrError:
+	switch r.last.t {
+	case mysqlx.ServerMessages_OK, mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
+
+	case mysqlx.ServerMessages_ERROR:
+		r.last.err = newError(r.last.b)
+
+	default:
 		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
+		if r.last.err == nil {
+			goto readUntilOkOrError
+		}
 	}
+
 	r.conn = nil
 	return r.last.err
 }
@@ -45,30 +57,77 @@ func (r *rows) Columns() []string {
 	if r.names == nil {
 		r.names = make([]string, len(r.columns))
 		for index, column := range r.columns {
-			r.names[index] = column.Name
+			r.names[index] = column.name
 		}
 	}
 	return r.names
 }
 
 func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
-	return r.columns[index].DatabaseTypeName
+	return r.columns[index].fieldType.String()
 }
 
 func (r *rows) ColumnTypeLength(index int) (int64, bool) {
-	return r.columns[index].Length, r.columns[index].HasLength
+	return r.columns[index].length, r.columns[index].hasLength
 }
 
 func (r *rows) ColumnTypeNullable(index int) (bool, bool) {
-	return r.columns[index].Nullable, r.columns[index].HasNullable
+	return r.columns[index].nullable, r.columns[index].hasNullable
 }
 
 func (r *rows) ColumnTypePrecisionScale(index int) (int64, int64, bool) {
-	return r.columns[index].Precision, r.columns[index].Scale, r.columns[index].HasPrecisionScale
+	c := r.columns[index]
+	return c.length, c.scale, c.hasLength && c.hasScale
 }
 
+var (
+	typeUint    = reflect.TypeOf(uint64(0))
+	typeInt     = reflect.TypeOf(int64(0))
+	typeBytes   = reflect.TypeOf([]byte{})
+	typeFloat32 = reflect.TypeOf(float32(0))
+	typeFloat64 = reflect.TypeOf(float64(0))
+	typeString  = reflect.TypeOf("")
+	typeTime    = reflect.TypeOf(time.Time{})
+)
+
 func (r *rows) ColumnTypeScanType(index int) reflect.Type {
-	return r.columns[index].ScanType
+
+	column := r.columns[index]
+	switch column.fieldType {
+	case mysqlx_resultset.ColumnMetaData_UINT:
+		return typeUint
+
+	case mysqlx_resultset.ColumnMetaData_SINT:
+		return typeInt
+
+	case mysqlx_resultset.ColumnMetaData_BYTES:
+		if column.hasContentType {
+			switch column.contentType {
+			case uint32(mysqlx_resultset.ContentType_BYTES_GEOMETRY):
+			case uint32(mysqlx_resultset.ContentType_BYTES_JSON):
+			case uint32(mysqlx_resultset.ContentType_BYTES_XML):
+			}
+		}
+		return typeBytes
+
+	case mysqlx_resultset.ColumnMetaData_DATETIME:
+		return typeTime
+
+	case mysqlx_resultset.ColumnMetaData_FLOAT:
+		return typeFloat32
+
+	case mysqlx_resultset.ColumnMetaData_DOUBLE:
+		return typeFloat64
+
+	case mysqlx_resultset.ColumnMetaData_ENUM:
+		return typeString
+
+	case mysqlx_resultset.ColumnMetaData_SET:
+
+	case mysqlx_resultset.ColumnMetaData_BIT:
+		return typeUint
+	}
+	panic(fmt.Sprintf("ColumnTypeScanType: missing support for %d", column.fieldType))
 }
 
 func (r *rows) Next(values []driver.Value) error {
@@ -164,26 +223,6 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = v
 
 			case mysqlx_resultset.ColumnMetaData_BYTES:
-				/*
-					if column.hasContentType {
-						// contentType is defined as a uint32 in mysqlx_resultset.proto
-						// But the enum of possible values is assigned type int32 by protoc
-						switch column.contentType {
-						case uint32(mysqlx_resultset.ContentType_BYTES_GEOMETRY):
-							values[index] = b[i : j-1 : j-1]
-
-						case uint32(mysqlx_resultset.ContentType_BYTES_JSON):
-							values[index] = b[i : j-1 : j-1]
-
-						case uint32(mysqlx_resultset.ContentType_BYTES_XML):
-							values[index] = b[i : j-1 : j-1]
-
-						default:
-							values[index] = b[i : j-1 : j-1]
-						}
-						break
-					}
-				*/
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_DOUBLE:
@@ -199,17 +238,6 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = math.Float32frombits(binary.LittleEndian.Uint32(b[i:j]))
 
 			case mysqlx_resultset.ColumnMetaData_DATETIME:
-				/*
-					if column.hasContentType {
-						switch column.contentType {
-						case uint32(mysqlx_resultset.ContentType_DATETIME_DATE):
-						case uint32(mysqlx_resultset.ContentType_DATETIME_DATETIME):
-							// Not defined in protobuf
-							const MysqlxColumnFlagsDateTimeTimeStamp = 1
-							if column.hasFlags && column.flags&MysqlxColumnFlagsDateTimeTimeStamp != 0 {
-							}
-						}
-					}*/
 				t, err := unmarshalDateTime(b[i:j])
 				if err != nil {
 					return err
@@ -251,6 +279,11 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 			index++
 
 		default:
+			switch tag >> 3 {
+			case tagRowValue:
+				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
+			}
+
 			// Skip over tags & values not familar with
 			if tag > 0x7F {
 				i--
@@ -259,11 +292,6 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 					return io.ErrUnexpectedEOF
 				}
 				i += uint64(nn)
-			}
-
-			switch tag >> 3 {
-			case tagRowValue:
-				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
 			}
 
 			switch tag & 7 {
