@@ -89,7 +89,3 @@ func unmarshalDecimal(b []byte) (string, error) {
 func unmarshalTime(b []byte) (interface{}, error) {
 	return nil, errors.New("unimplemented TIME unmarshalling")
 }
-
-func unmarshalBit(b []byte) (interface{}, error) {
-	return nil, errors.New("unimplemented BIT unmarshalling")
-}
