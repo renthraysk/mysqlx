@@ -127,7 +127,7 @@ func (r *rows) ColumnTypeScanType(index int) reflect.Type {
 	case mysqlx_resultset.ColumnMetaData_BIT:
 		return typeUint
 	}
-	panic(fmt.Sprintf("ColumnTypeScanType: missing support for %d", column.fieldType))
+	panic(fmt.Sprintf("ColumnTypeScanType: missing support for %s", column.fieldType.String())
 }
 
 func (r *rows) Next(values []driver.Value) error {
@@ -165,6 +165,7 @@ func (r *rows) Next(values []driver.Value) error {
 
 	return nil
 }
+
 
 // unmarshalRow parses mysqlx_resultset Row protobuf
 func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
