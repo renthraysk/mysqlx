@@ -4,7 +4,6 @@ import (
 	"math"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_sql"
@@ -26,7 +25,6 @@ func TestSerialization(t *testing.T) {
 		"bool":        {"SELECT ?", []interface{}{true}},
 		"float32":     {"SELECT ?", []interface{}{float32(math.Pi)}},
 		"float64":     {"SELECT ?", []interface{}{float64(math.Pi)}},
-		"time":        {"SELECT ?", []interface{}{time.Now()}},
 	}
 
 	for name, in := range tests {
