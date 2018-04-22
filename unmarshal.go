@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 func unmarshalDateTime(b []byte) (time.Time, error) {
@@ -87,5 +85,35 @@ func unmarshalDecimal(b []byte) (string, error) {
 }
 
 func unmarshalTime(b []byte) (interface{}, error) {
-	return nil, errors.New("unimplemented TIME unmarshalling")
+
+	var min, sec, usec uint64
+
+	i := 1
+	hour, j := binary.Uvarint(b[i:])
+	if j > 0 {
+		i += j
+		min, j = binary.Uvarint(b[i:])
+		if j > 0 {
+			i += j
+			sec, j = binary.Uvarint(b[i:])
+			if j > 0 {
+				i += j
+				usec, j = binary.Uvarint(b[i:])
+			}
+		}
+	}
+	if j > 0 {
+		return nil, fmt.Errorf("failed to decode time (%x)", b)
+	}
+
+	d := hour * uint64(time.Hour)
+	d += min * uint64(time.Minute)
+	d += sec * uint64(time.Second)
+	d += usec * uint64(time.Microsecond)
+
+	if b[0] == 0x01 {
+		return time.Duration(-int64(d)), nil
+	}
+
+	return time.Duration(d), nil
 }
