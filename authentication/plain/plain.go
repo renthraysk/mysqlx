@@ -8,6 +8,7 @@ import (
 
 type auth struct{}
 
+// New returns an implementation of authentication.StartContinuer using the mysql plain authentication mechanism
 func New() authentication.Starter {
 	return &auth{}
 }

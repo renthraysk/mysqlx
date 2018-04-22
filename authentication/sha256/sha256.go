@@ -11,6 +11,7 @@ import (
 
 type auth struct{}
 
+// New returns an implementation of authentication.StartContinuer using the sha256_memory authentication mechanism
 func New() authentication.StartContinuer {
 	return &auth{}
 }
