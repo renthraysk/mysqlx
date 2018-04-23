@@ -7,13 +7,16 @@ import (
 	"github.com/renthraysk/mysqlx/msg"
 )
 
-type sessionResetter func(ctx context.Context, c *conn) error
+// SessionResetter function to call to reset the connection for reuse.
+type SessionResetter func(ctx context.Context, c *conn) error
 
-func noSessionResetter(ctx context.Context, c *conn) error {
+// NoSessionResetter a no op session resetter, historically equivalent
+func NoSessionResetter(ctx context.Context, c *conn) error {
 	return nil
 }
 
-func hardSessionResetter(ctx context.Context, c *conn) error {
+// HardSessionResetter a full connection reset. Transactions closed, prepare statements deleted, temporary tables dropped and session variables reset to global defaults
+func HardSessionResetter(ctx context.Context, c *conn) error {
 	if err := c.send(ctx, msg.SessionReset(c.buf[:0])); err != nil {
 		return driver.ErrBadConn
 	}

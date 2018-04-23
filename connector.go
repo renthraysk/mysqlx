@@ -27,7 +27,7 @@ type Connector struct {
 	password        string
 	authentication  authentication.Starter
 	stmtPreparer    stmtPreparer
-	sessionResetter sessionResetter
+	sessionResetter SessionResetter
 
 	bufferSize int
 }
@@ -51,7 +51,7 @@ func New(network, addr string, options ...Option) (*Connector, error) {
 		addr:            addr,
 		authentication:  native.New(),
 		stmtPreparer:    noStmtPreparer,
-		sessionResetter: noSessionResetter,
+		sessionResetter: NoSessionResetter,
 		bufferSize:      minBufferSize,
 	}
 
