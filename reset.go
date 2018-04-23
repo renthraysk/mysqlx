@@ -10,7 +10,7 @@ import (
 // SessionResetter function to call to reset the connection for reuse.
 type SessionResetter func(ctx context.Context, c *conn) error
 
-// NoSessionResetter a no op session resetter, historically equivalent
+// NoSessionResetter a no op session resetter, historically equivalent behaviour
 func NoSessionResetter(ctx context.Context, c *conn) error {
 	return nil
 }
