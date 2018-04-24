@@ -104,14 +104,14 @@ func (c *conn) readMessage(ctx context.Context) (mysqlx.ServerMessages_Type, []b
 	return t, b, err
 }
 
-func (c *conn) send(ctx context.Context, msg msg.Msg) error {
+func (c *conn) send(ctx context.Context, m msg.Msg) error {
 	c.offset = 0
 	c.length = 0
 	deadline, _ := ctx.Deadline()
 	if err := c.netConn.SetWriteDeadline(deadline); err != nil {
 		return errors.Wrap(err, "unable to set deadline")
 	}
-	_, err := msg.WriteTo(c.netConn)
+	_, err := m.WriteTo(c.netConn)
 	return err
 }
 
