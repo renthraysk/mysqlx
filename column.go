@@ -45,7 +45,7 @@ type ColumnType struct {
 	hasCollation   bool
 	collation      Collation
 	hasContentType bool
-	contentType    uint32
+	contentType    mysqlx_resultset.ContentType_BYTES
 }
 
 // Reset resets the metadata for a column, for reusing ColumnType structs
@@ -142,7 +142,7 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			c.hasContentType = true
-			c.contentType = uint32(contentType)
+			c.contentType = mysqlx_resultset.ContentType_BYTES(contentType)
 			i += uint64(nn)
 
 		default:

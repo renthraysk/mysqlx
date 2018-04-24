@@ -103,9 +103,9 @@ func (r *rows) ColumnTypeScanType(index int) reflect.Type {
 	case mysqlx_resultset.ColumnMetaData_BYTES:
 		if column.hasContentType {
 			switch column.contentType {
-			case uint32(mysqlx_resultset.ContentType_BYTES_GEOMETRY):
-			case uint32(mysqlx_resultset.ContentType_BYTES_JSON):
-			case uint32(mysqlx_resultset.ContentType_BYTES_XML):
+			case mysqlx_resultset.ContentType_BYTES_GEOMETRY:
+			case mysqlx_resultset.ContentType_BYTES_JSON:
+			case mysqlx_resultset.ContentType_BYTES_XML:
 			}
 		}
 		return typeBytes
