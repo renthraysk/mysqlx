@@ -23,10 +23,11 @@ import (
 )
 
 type result struct {
-	lastInsertID uint64
-	rowsAffected uint64
+	lastInsertID uint64 // protocol defines as uint64, database/sql as int64
+	rowsAffected uint64 // protocol defines as uint64, database/sql as int64
 }
 
+// ErrInt64Overflow is the error return when an int64
 var ErrInt64Overflow = errors.New("Value exceeded math.MaxInt64")
 
 func (r *result) LastInsertId() (int64, error) {
@@ -392,6 +393,7 @@ readAuthenticateStartResponse:
 		return newError(b)
 
 	case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
+		// log.Printf("Authenticated via %T", starter)
 		return nil
 
 	case mysqlx.ServerMessages_NOTICE:
@@ -423,6 +425,7 @@ readAuthenticateStartResponse:
 			goto readAuthenticateContinueResponse
 
 		case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
+			//			log.Printf("Authenticated via %T", starter)
 			return nil
 
 		default:

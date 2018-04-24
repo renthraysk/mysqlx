@@ -30,6 +30,7 @@ const (
 	tagColumnMetaDataContentType      = 12
 )
 
+// ColumnType represents metadata of a column
 type ColumnType struct {
 	fieldType mysqlx_resultset.ColumnMetaData_FieldType
 	name      string
@@ -47,6 +48,7 @@ type ColumnType struct {
 	contentType    uint32
 }
 
+// Reset resets the metadata for a column, for reusing ColumnType structs
 func (c *ColumnType) Reset() {
 	c.fieldType = mysqlx_resultset.ColumnMetaData_SINT
 
@@ -58,10 +60,12 @@ func (c *ColumnType) Reset() {
 	c.hasContentType = false
 }
 
+// IsBinary returns true if column represets a binary type
 func (c *ColumnType) IsBinary() bool {
 	return c.fieldType == mysqlx_resultset.ColumnMetaData_BYTES && c.hasCollation && c.collation.IsBinary()
 }
 
+// Unmarshal unmarhals the mysqlx_resultset.ColumnMetaData protobuf into the ColumnType
 func (c *ColumnType) Unmarshal(b []byte) error {
 	var nn int
 

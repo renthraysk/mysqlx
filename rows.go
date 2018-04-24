@@ -160,9 +160,7 @@ func (r *rows) Next(values []driver.Value) error {
 		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
 			return io.EOF
 		}
-
 	}
-
 	return nil
 }
 
