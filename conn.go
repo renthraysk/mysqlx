@@ -409,7 +409,7 @@ readAuthenticateStartResponse:
 		if err := proto.Unmarshal(b, &ac); err != nil {
 			return errors.Wrap(err, "failed to unmarshal AuthenticateContinue")
 		}
-		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, ac.GetAuthData())); err != nil {
+		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, ac.AuthData)); err != nil {
 			return errors.Wrap(err, "failed sending AuthenticateContinue")
 		}
 	readAuthenticateContinueResponse:
