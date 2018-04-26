@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/binary"
-	"fmt"
 	"math"
 	"net"
 	"time"
@@ -307,7 +306,7 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 			start = "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"
 		}
 	default:
-		return nil, fmt.Errorf("Unsupported transaction isolation level (%d)", options.Isolation)
+		return nil, errors.Errorf("Unsupported transaction isolation level (%d)", options.Isolation)
 	}
 
 	if len(set) > 0 {
@@ -350,7 +349,7 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 	case uint8, uint16, uint32, uint, int8, int16, int32, int:
 		// Supported via conversion to a type in above case.
 	default:
-		return fmt.Errorf("Unsupported type %T", nv.Value)
+		return errors.Errorf("Unsupported type %T", nv.Value)
 	}
 	return nil
 }
@@ -445,9 +444,9 @@ readAuthenticateStartResponse:
 			return nil
 
 		default:
-			return fmt.Errorf("unexpected server response to AuthenticateContinue %s(%d)", t.String(), t)
+			return errors.Errorf("unexpected server response to AuthenticateContinue %s(%d)", t.String(), t)
 		}
 	default:
 	}
-	return fmt.Errorf("unexpected server response to AuthenticateStart %s(%d)", t.String(), t)
+	return errors.Errorf("unexpected server response to AuthenticateStart %s(%d)", t.String(), t)
 }
