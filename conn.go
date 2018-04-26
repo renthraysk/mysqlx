@@ -365,14 +365,15 @@ func (c *conn) authenticate(ctx context.Context) error {
 	}
 	switch c.netConn.(type) {
 	case *tls.Conn, *net.UnixConn:
-		// Connected securely, so can attempt to authenticate with PLAIN
+		// Connected securely, so can attempt to authenticate with PLAIN,
+		// which will populate the cache for caching_sha2 and sha256_password to start working
 		if err2 := c.authenticate2(ctx, plain.New()); err2 == nil {
 			return nil
 		}
 	default:
 		// @TODO Need to decide what to do here..
 		// https://dev.mysql.com/doc/refman/8.0/en/x-plugin-sha2-cache-plugin.html
-		// Current feeling is to not allow authentication with sha2 over non secure connections.
+		// Current feeling is to not allow authentication with sha2 over non secure connections, as cannot initially populate the cache without TLS.
 	}
 	return err
 }
