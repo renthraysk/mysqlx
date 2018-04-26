@@ -355,6 +355,21 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 	return nil
 }
 
+func (c *conn) enableTLS(ctx context.Context, tlsConfig *tls.Config) error {
+	s := msg.NewCapabilitySetTLSEnable(c.buf[:0])
+	if _, err := c.execMsg(ctx, s); err != nil {
+		c.netConn.Close()
+		return errors.Wrap(err, "failed to set TLS capability")
+	}
+	tlsConn := tls.Client(c.netConn, tlsConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		tlsConn.Close()
+		return errors.Wrap(err, "failed TLS handshake")
+	}
+	c.netConn = tlsConn
+	return nil
+}
+
 func (c *conn) authenticate(ctx context.Context) error {
 	err := c.authenticate2(ctx, c.connector.authentication)
 	if err == nil {

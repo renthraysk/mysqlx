@@ -8,7 +8,6 @@ import (
 
 	"github.com/renthraysk/mysqlx/authentication"
 	"github.com/renthraysk/mysqlx/authentication/native"
-	"github.com/renthraysk/mysqlx/msg"
 
 	"github.com/pkg/errors"
 )
@@ -81,7 +80,7 @@ func WithDatabase(database string) Option {
 }
 
 // WithAuthentication set the authentication mechanism that will authentication with.
-// If authenticating a connection over TLS then either authentication/native for accounts using the mysql_native_password authentication plugin or authentication/sha256 for those using sha256_password or caching_sha2_password.
+// If authenticating a connection over TLS then either authentication/native or authentication/sha256.
 // If not using a TLS connection then authentication/native is the only reliable option.
 func WithAuthentication(auth authentication.Starter) Option {
 	return func(cnn *Connector) error {
@@ -135,20 +134,8 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 			netConn.Close()
 			return nil, errors.Wrap(err, "failed to set keep alive")
 		}
-
-		// TLS
 		if cnn.tlsConfig != nil {
-			s := msg.NewCapabilitySetTLSEnable(conn.buf[:0])
-			if _, err := conn.execMsg(ctx, s); err != nil {
-				netConn.Close()
-				return nil, errors.Wrap(err, "failed to set TLS capability")
-			}
-			tlsConn := tls.Client(conn.netConn, cnn.tlsConfig)
-			if err := tlsConn.Handshake(); err != nil {
-				tlsConn.Close()
-				return nil, errors.Wrap(err, "failed TLS handshake")
-			}
-			conn.netConn = tlsConn
+			conn.enableTLS(ctx, cnn.tlsConfig)
 		}
 	}
 
