@@ -27,7 +27,9 @@ func FlushAuthenticationCache(tb testing.TB) {
 	}
 }
 
-func TestAuthentication(t *testing.T) {
+func runAuthenticationTests(t *testing.T) {
+	t.Helper()
+
 	tests := map[string]struct {
 		network string
 		addr    string
@@ -73,23 +75,23 @@ func TestAuthentication(t *testing.T) {
 		},
 	}
 
-	f := func(t *testing.T) {
-		for name, test := range tests {
-			t.Run(name, func(t *testing.T) {
-				connector, err := New(test.network, test.addr, test.options...)
-				if err != nil {
-					t.Fatalf("failed to create connector: %s", err)
-				}
-				db := sql.OpenDB(connector)
-				defer db.Close()
-				if err = db.Ping(); err != nil {
-					t.Fatalf("failed to ping: %s", err)
-				}
-			})
-		}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			connector, err := New(test.network, test.addr, test.options...)
+			if err != nil {
+				t.Fatalf("failed to create connector: %s", err)
+			}
+			db := sql.OpenDB(connector)
+			defer db.Close()
+			if err = db.Ping(); err != nil {
+				t.Fatalf("failed to ping: %s", err)
+			}
+		})
 	}
+}
 
+func TestAuthentication(t *testing.T) {
 	FlushAuthenticationCache(t)
-	t.Run("empty", f)
-	t.Run("cached", f)
+	t.Run("empty", runAuthenticationTests)
+	t.Run("cached", runAuthenticationTests)
 }
