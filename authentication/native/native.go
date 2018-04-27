@@ -9,18 +9,18 @@ import (
 	"github.com/renthraysk/mysqlx/slice"
 )
 
-type auth struct{}
+type Auth struct{}
 
 // New returns an implementation of authentication.StartContinuer using the mysql native password authentication mechanism
-func New() authentication.StartContinuer {
-	return &auth{}
+func New() *Auth {
+	return &Auth{}
 }
 
-func (auth) Start(buf []byte, credentials authentication.Credentials) msg.Msg {
+func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.AuthenticateStart {
 	return msg.NewAuthenticateStart(buf, "MYSQL41")
 }
 
-func (auth) Continue(buf []byte, credentials authentication.Credentials, authData []byte) msg.Msg {
+func (Auth) Continue(buf []byte, credentials authentication.Credentials, authData []byte) msg.MsgBytes {
 	n := len(credentials.Database()) + 1 + len(credentials.UserName()) + 1
 	if len(credentials.Password()) > 0 {
 		n += 1 + 2*sha1.Size

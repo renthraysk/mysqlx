@@ -26,8 +26,8 @@ var setTLSEnable = []byte{
 }
 
 // NewCapabilitySetTLSEnable returns a Msg to send to mysql to enable TLS
-func NewCapabilitySetTLSEnable(buf []byte) Msg {
+func NewCapabilitySetTLSEnable(buf []byte) MsgBytes {
 	_, b := slice.Allocate(buf, len(setTLSEnable))
 	copy(b, setTLSEnable)
-	return msg(b)
+	return MsgBytes(b)
 }

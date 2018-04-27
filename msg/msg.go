@@ -17,25 +17,25 @@ type Msg interface {
 	io.WriterTo
 }
 
-// msg generic implementation of Msg, for simple byte slices
-type msg []byte
+// MsgBytes generic implementation of Msg, for simple byte slices
+type MsgBytes []byte
 
-func (m msg) WriteTo(w io.Writer) (int64, error) {
+func (m MsgBytes) WriteTo(w io.Writer) (int64, error) {
 	binary.LittleEndian.PutUint32(m, uint32(len(m)-4))
 	n, err := w.Write(m)
 	return int64(n), err
 }
 
 // ConnectionClose appends the client close message to buf, and returns Msg to send to server
-func ConnectionClose(buf []byte) Msg {
+func ConnectionClose(buf []byte) MsgBytes {
 	_, b := slice.Allocate(buf, HeaderSize)
 	b[4] = byte(mysqlx.ClientMessages_CON_CLOSE)
-	return msg(b)
+	return MsgBytes(b)
 }
 
 // SessionReset appends the client session reset message to buf, and returns Msg to send to server
-func SessionReset(buf []byte) Msg {
+func SessionReset(buf []byte) MsgBytes {
 	_, b := slice.Allocate(buf, HeaderSize)
 	b[4] = byte(mysqlx.ClientMessages_SESS_RESET)
-	return msg(b)
+	return MsgBytes(b)
 }

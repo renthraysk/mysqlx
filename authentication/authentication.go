@@ -9,10 +9,10 @@ type Credentials interface {
 }
 
 type Starter interface {
-	Start(buf []byte, credentials Credentials) msg.Msg
+	Start(buf []byte, credentials Credentials) msg.AuthenticateStart
 }
 
 type StartContinuer interface {
 	Starter
-	Continue(buf []byte, credentials Credentials, authData []byte) msg.Msg
+	Continue(buf []byte, credentials Credentials, authData []byte) msg.MsgBytes
 }

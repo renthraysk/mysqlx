@@ -54,7 +54,7 @@ func (a *AuthenticateStart) SetAuthData(authData []byte) {
 }
 
 // NewAuthenticateContinue marshals AuthenticateContinue protobuf message
-func NewAuthenticateContinue(buf []byte, authData []byte) Msg {
+func NewAuthenticateContinue(buf []byte, authData []byte) MsgBytes {
 	n := len(authData)
 	i := SizeVarint(uint64(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
@@ -62,5 +62,5 @@ func NewAuthenticateContinue(buf []byte, authData []byte) Msg {
 	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_CONTINUE)
 	b[5] = tagAuthenticateContinueAuthData<<3 | proto.WireBytes
 	copy(b[6+i:], authData)
-	return msg(b)
+	return MsgBytes(b)
 }
