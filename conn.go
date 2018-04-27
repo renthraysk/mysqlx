@@ -144,22 +144,22 @@ readExecResponse:
 			return nil, errors.Wrap(err, "failed to unmarshal Frame")
 		}
 
-		switch f.GetType() {
-		case uint32(mysqlx_notice.Frame_WARNING):
+		switch mysqlx_notice.Frame_Type(f.GetType()) {
+		case mysqlx_notice.Frame_WARNING:
 			var w mysqlx_notice.Warning
 
 			if err := proto.Unmarshal(f.Payload, &w); err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal Warning")
 			}
 
-		case uint32(mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED):
+		case mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED:
 			var v mysqlx_notice.SessionVariableChanged
 
 			if err := proto.Unmarshal(f.Payload, &v); err != nil {
 				return nil, errors.Wrap(err, "failed to unmarshal SessionVariableChanged")
 			}
 
-		case uint32(mysqlx_notice.Frame_SESSION_STATE_CHANGED):
+		case mysqlx_notice.Frame_SESSION_STATE_CHANGED:
 			var s mysqlx_notice.SessionStateChanged
 
 			if err := proto.Unmarshal(f.Payload, &s); err != nil {
