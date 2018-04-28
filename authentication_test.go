@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/renthraysk/mysqlx/authentication/native"
+	"github.com/renthraysk/mysqlx/authentication/mysql41"
 	"github.com/renthraysk/mysqlx/authentication/sha256"
 )
 
@@ -35,21 +35,21 @@ func runAuthenticationTests(t *testing.T) {
 		addr    string
 		options []Option
 	}{
-		"tcp-native": {
+		"tcp-mysql41": {
 			"tcp",
 			ipAddress,
 			[]Option{
-				WithAuthentication(native.New()),
+				WithAuthentication(mysql41.New()),
 				WithUserPassword("usernative", "passwordnative"),
 			},
 		},
 
-		"tls-native": {
+		"tls-mysql41": {
 			"tcp",
 			ipAddress,
 			[]Option{
 				WithTLSConfig(TLSInsecureSkipVerify()),
-				WithAuthentication(native.New()),
+				WithAuthentication(mysql41.New()),
 				WithUserPassword("usernative", "passwordnative"),
 			},
 		},

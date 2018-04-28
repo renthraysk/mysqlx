@@ -1,4 +1,4 @@
-package native
+package mysql41
 
 import (
 	"crypto/sha1"
@@ -11,7 +11,7 @@ import (
 
 type Auth struct{}
 
-// New returns an implementation of authentication.StartContinuer using the mysql native password authentication mechanism
+// New returns an implementation of authentication.StartContinuer using the mysql41 password authentication mechanism
 func New() *Auth {
 	return &Auth{}
 }

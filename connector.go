@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/renthraysk/mysqlx/authentication"
-	"github.com/renthraysk/mysqlx/authentication/native"
+	"github.com/renthraysk/mysqlx/authentication/mysql41"
 
 	"github.com/pkg/errors"
 )
@@ -48,7 +48,7 @@ func New(network, addr string, options ...Option) (*Connector, error) {
 	cnn := &Connector{
 		network:         network,
 		addr:            addr,
-		authentication:  native.New(),
+		authentication:  mysql41.New(),
 		stmtPreparer:    noStmtPreparer,
 		sessionResetter: NoSessionResetter,
 		bufferSize:      minBufferSize,
