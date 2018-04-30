@@ -264,13 +264,12 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 	return c.connector.stmtPreparer(context.Background(), c, query)
 }
 
-func (c *conn) CloseContext(ctx context.Context) error {
+func (c *conn) Close() error {
 	if c.netConn == nil {
 		return nil
 	}
-	err := c.send(ctx, msg.ConnectionClose(c.buf[:0]))
-	_, _, _ = c.readMessage(ctx)
-
+	err := c.send(context.Background(), msg.ConnectionClose(c.buf[:0]))
+	_, _, _ = c.readMessage(context.Background())
 	errClose := c.netConn.Close()
 	c.netConn = nil
 	if err != nil {
@@ -279,12 +278,7 @@ func (c *conn) CloseContext(ctx context.Context) error {
 	return errClose
 }
 
-func (c *conn) Close() error {
-	return c.CloseContext(context.Background())
-}
-
 func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx, error) {
-
 	set := ""
 	start := "START TRANSACTION"
 	if options.ReadOnly {
@@ -374,7 +368,7 @@ func (c *conn) authenticate(ctx context.Context) error {
 	if err == nil {
 		return nil
 	}
-	if e, ok := err.(*Error); !ok || e.Code != 1045 { // Invalid user or password (code 1045)
+	if e, ok := errors.Cause(err).(*Error); !ok || e.Code != 1045 { // Invalid user or password (code 1045)
 		return err
 	}
 	switch c.netConn.(type) {
