@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"reflect"
-	"time"
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
@@ -20,148 +18,128 @@ const (
 	tagRowValue = 1
 )
 
+type queryState int
+
+const (
+	queryStart queryState = iota
+	queryFetchColumns
+	queryFetchedFirstRow
+	queryFetchRows
+	queryFetchDone
+	queryFetchDoneMoreResultSets
+	queryError
+	queryClosed
+)
+
 type rows struct {
 	conn    *conn
+	state   queryState
+	err     error
+	names   []string
 	columns []*ColumnType
-	last    struct {
-		t   mysqlx.ServerMessages_Type
-		b   []byte
-		err error
+	buf     [16]ColumnType
+
+	t mysqlx.ServerMessages_Type
+	b []byte
+}
+
+func (r *rows) readColumns(ctx context.Context) error {
+	r.state = queryFetchColumns
+	r.columns = r.columns[:0]
+	r.names = nil
+
+	buf := r.buf[:]
+	n := len(buf)
+
+	t, b, err := r.conn.readMessage(ctx)
+	for err == nil && t == mysqlx.ServerMessages_RESULTSET_COLUMN_META_DATA {
+		if n == 0 {
+			n = 16
+			buf = make([]ColumnType, n)
+		}
+		n--
+		ct := &buf[n]
+		if err := ct.Unmarshal(b); err != nil {
+			r.state = queryError
+			return err
+		}
+		r.columns = append(r.columns, ct)
+		t, b, err = r.conn.readMessage(ctx)
 	}
+	if err != nil {
+		r.state, r.err = queryError, err
+		return err
+	}
+	switch t {
+	case mysqlx.ServerMessages_ERROR:
+		r.state, r.err = queryError, newError(b)
+		return r.err
 
-	names []string
+	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
+		r.state = queryFetchDone
+		return nil
 
-	buf [16]ColumnType
+	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
+		r.state = queryFetchDoneMoreResultSets
+		return nil
+
+	case mysqlx.ServerMessages_RESULTSET_ROW:
+		r.state = queryFetchedFirstRow
+		r.t, r.b, r.err = t, b, err
+		return nil
+	}
+	return nil
 }
 
 func (r *rows) Close() error {
-readUntilOkOrError:
-	switch r.last.t {
-	case mysqlx.ServerMessages_OK, mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-
-	case mysqlx.ServerMessages_ERROR:
-		r.last.err = newError(r.last.b)
-
+	switch r.state {
+	case queryClosed:
+	case queryError:
 	default:
-		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
-		if r.last.err == nil {
-			goto readUntilOkOrError
+		t, _, err := r.conn.readMessage(context.Background())
+		for err == nil && t != mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK {
+			t, _, err = r.conn.readMessage(context.Background())
 		}
 	}
-
-	r.conn = nil
-	return r.last.err
-}
-
-func (r *rows) Columns() []string {
-	if r.names == nil {
-		r.names = make([]string, len(r.columns))
-		for index, column := range r.columns {
-			r.names[index] = column.name
-		}
-	}
-	return r.names
-}
-
-func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
-	return r.columns[index].fieldType.String()
-}
-
-func (r *rows) ColumnTypeLength(index int) (int64, bool) {
-	return r.columns[index].length, r.columns[index].hasLength
-}
-
-func (r *rows) ColumnTypeNullable(index int) (bool, bool) {
-	return r.columns[index].nullable, r.columns[index].hasNullable
-}
-
-func (r *rows) ColumnTypePrecisionScale(index int) (int64, int64, bool) {
-	c := r.columns[index]
-	return c.length, c.scale, c.hasLength && c.hasScale
-}
-
-var (
-	typeUint    = reflect.TypeOf(uint64(0))
-	typeInt     = reflect.TypeOf(int64(0))
-	typeBytes   = reflect.TypeOf([]byte{})
-	typeFloat32 = reflect.TypeOf(float32(0))
-	typeFloat64 = reflect.TypeOf(float64(0))
-	typeString  = reflect.TypeOf("")
-	typeTime    = reflect.TypeOf(time.Time{})
-)
-
-func (r *rows) ColumnTypeScanType(index int) reflect.Type {
-
-	column := r.columns[index]
-	switch column.fieldType {
-	case mysqlx_resultset.ColumnMetaData_UINT:
-		return typeUint
-
-	case mysqlx_resultset.ColumnMetaData_SINT:
-		return typeInt
-
-	case mysqlx_resultset.ColumnMetaData_BYTES:
-		if column.hasContentType {
-			switch column.contentType {
-			case mysqlx_resultset.ContentType_BYTES_GEOMETRY:
-			case mysqlx_resultset.ContentType_BYTES_JSON:
-			case mysqlx_resultset.ContentType_BYTES_XML:
-			}
-		}
-		return typeBytes
-
-	case mysqlx_resultset.ColumnMetaData_DATETIME:
-		return typeTime
-
-	case mysqlx_resultset.ColumnMetaData_FLOAT:
-		return typeFloat32
-
-	case mysqlx_resultset.ColumnMetaData_DOUBLE:
-		return typeFloat64
-
-	case mysqlx_resultset.ColumnMetaData_ENUM:
-		return typeString
-
-	case mysqlx_resultset.ColumnMetaData_SET:
-
-	case mysqlx_resultset.ColumnMetaData_BIT:
-		return typeUint
-	}
-	panic(fmt.Sprintf("ColumnTypeScanType: missing support for %s", column.fieldType.String()))
+	r.state = queryClosed
+	return nil
 }
 
 func (r *rows) Next(values []driver.Value) error {
-
-	if r.last.err != nil {
-		return r.last.err
-	}
-	switch r.last.t {
-	case mysqlx.ServerMessages_RESULTSET_ROW:
-		err := r.unmarshalRow(r.last.b, values)
-		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
-		return err
-
-	case mysqlx.ServerMessages_ERROR:
-		r.last.err = newError(r.last.b)
-		return r.last.err
-
-	case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-		r.last.err = io.EOF
-		return r.last.err
-
-	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE, mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
-
-	loopUntilExecuteOK:
-		r.last.t, r.last.b, r.last.err = r.conn.readMessage(context.TODO())
-		switch r.last.t {
-		case mysqlx.ServerMessages_NOTICE:
-			goto loopUntilExecuteOK
-
-		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
+	t, b, err := r.t, r.b, r.err
+	switch r.state {
+	case queryFetchedFirstRow:
+		r.state = queryFetchRows
+	case queryFetchRows:
+		t, b, err = r.conn.readMessage(context.Background())
+		if err != nil {
+			r.state, r.err = queryError, err
 			return io.EOF
 		}
+	default:
+		return io.EOF
 	}
-	return nil
+
+	switch t {
+	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
+		r.state = queryFetchDoneMoreResultSets
+	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
+		r.state = queryFetchDone
+	case mysqlx.ServerMessages_RESULTSET_ROW:
+		return r.unmarshalRow(b, values)
+	}
+	return io.EOF
+}
+
+func (r *rows) HasNextResultSet() bool {
+	return r.state == queryFetchDoneMoreResultSets
+}
+
+func (r *rows) NextResultSet() error {
+	if r.state != queryFetchDoneMoreResultSets {
+		return io.EOF
+	}
+	return r.readColumns(context.Background())
 }
 
 // unmarshalRow parses mysqlx_resultset Row protobuf

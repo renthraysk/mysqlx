@@ -27,6 +27,8 @@ type conn struct {
 	buf    []byte
 	offset uint
 	length uint
+
+	authenticateContinue mysqlx_session.AuthenticateContinue
 }
 
 func (c *conn) read(ctx context.Context, n uint) ([]byte, error) {
@@ -42,10 +44,12 @@ func (c *conn) read(ctx context.Context, n uint) ([]byte, error) {
 			c.offset = 0
 		}
 
-		deadline, _ := ctx.Deadline()
-		if err := c.netConn.SetReadDeadline(deadline); err != nil {
-			return nil, err
-		}
+		/*
+			deadline, _ := ctx.Deadline()
+			if err := c.netConn.SetReadDeadline(deadline); err != nil {
+				return nil, err
+			}
+		*/
 		for c.length < n {
 			nn, err := c.netConn.Read(c.buf[c.offset+c.length:])
 			c.length += uint(nn)
@@ -84,7 +88,7 @@ func (c *conn) send(ctx context.Context, m msg.Msg) error {
 	c.offset = 0
 	c.length = 0
 	deadline, _ := ctx.Deadline()
-	if err := c.netConn.SetWriteDeadline(deadline); err != nil {
+	if err := c.netConn.SetDeadline(deadline); err != nil {
 		return errors.Wrap(err, "unable to set deadline")
 	}
 	_, err := m.WriteTo(c.netConn)
@@ -181,46 +185,12 @@ func (c *conn) queryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error) {
 	if err := c.send(ctx, msg); err != nil {
 		return nil, err
 	}
-
 	r := &rows{
 		conn: c,
 	}
-
-readColumnMetaData:
-	r.last.t, r.last.b, r.last.err = c.readMessage(ctx)
-	if r.last.err != nil {
-		return nil, errors.Wrap(r.last.err, "failed to read query response")
+	if err := r.readColumns(ctx); err != nil {
+		return nil, err
 	}
-	switch r.last.t {
-
-	case mysqlx.ServerMessages_ERROR:
-		r.last.err = newError(r.last.b)
-		return nil, r.last.err
-
-	case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-		return r, nil
-
-	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE, mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
-		return r, nil
-
-	case mysqlx.ServerMessages_RESULTSET_COLUMN_META_DATA:
-
-		var ct *ColumnType
-
-		n := len(r.columns)
-		if n < len(r.buf) {
-			ct = &r.buf[n]
-		} else {
-			ct = new(ColumnType)
-		}
-		if err := ct.Unmarshal(r.last.b); err != nil {
-			return nil, err
-		}
-		r.columns = append(r.columns, ct)
-
-		goto readColumnMetaData
-	}
-
 	return r, nil
 }
 
@@ -390,12 +360,10 @@ readAuthenticateStartResponse:
 		if !ok {
 			return errors.New("unexpected AuthenticateContinue")
 		}
-
-		var ac mysqlx_session.AuthenticateContinue
-		if err := proto.Unmarshal(b, &ac); err != nil {
+		if err := proto.Unmarshal(b, &c.authenticateContinue); err != nil {
 			return errors.Wrap(err, "failed to unmarshal AuthenticateContinue")
 		}
-		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, ac.AuthData)); err != nil {
+		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, c.authenticateContinue.AuthData)); err != nil {
 			return errors.Wrap(err, "failed sending AuthenticateContinue")
 		}
 	readAuthenticateContinueResponse:

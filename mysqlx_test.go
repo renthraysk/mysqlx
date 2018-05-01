@@ -136,7 +136,41 @@ func TestRowsAffected(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, n, int64(1))
 	}
+}
 
+func TestMultipleResultsets(t *testing.T) {
+
+	const (
+		A int64 = 42
+		B       = "testing"
+	)
+	var (
+		a int64
+		b string
+	)
+
+	db := NewDB(t)
+	defer db.Close()
+
+	rows, err := db.Query("CALL spMultipleResultsets(?, ?)", A, B)
+	if err != nil {
+		t.Fatalf("query failed: %s", err)
+	}
+	defer rows.Close()
+
+	assert.True(t, rows.Next(), "rows.Next returned false")
+	if err := rows.Scan(&a); err != nil {
+		t.Fatalf("failed to scan: %s", err)
+	}
+	assert.Equal(t, A, a)
+	assert.False(t, rows.Next(), "rows.Next returned true")
+	assert.True(t, rows.NextResultSet(), "rows.NextResulSet returned false")
+	assert.True(t, rows.Next(), "rows.Next returned false")
+	if err := rows.Scan(&b); err != nil {
+		t.Fatalf("failed to scan: %s", err)
+	}
+	assert.Equal(t, B, b)
+	assert.False(t, rows.Next(), "rows.Next returned true")
 }
 
 func TestBeginTx(t *testing.T) {
