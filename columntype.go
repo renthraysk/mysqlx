@@ -47,7 +47,7 @@ type ColumnType struct {
 	hasCollation   bool
 	collation      Collation
 	hasContentType bool
-	contentType    mysqlx_resultset.ContentType_BYTES
+	contentType    uint32
 }
 
 // Reset resets the metadata for a column, for reusing ColumnType structs
@@ -98,7 +98,7 @@ func (c *ColumnType) ScanType() reflect.Type {
 
 	case mysqlx_resultset.ColumnMetaData_BYTES:
 		if c.hasContentType {
-			switch c.contentType {
+			switch mysqlx_resultset.ContentType_BYTES(c.contentType) {
 			case mysqlx_resultset.ContentType_BYTES_GEOMETRY:
 			case mysqlx_resultset.ContentType_BYTES_JSON:
 			case mysqlx_resultset.ContentType_BYTES_XML:
@@ -213,7 +213,7 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			c.hasContentType = true
-			c.contentType = mysqlx_resultset.ContentType_BYTES(contentType)
+			c.contentType = uint32(contentType)
 			i += uint64(nn)
 
 		default:

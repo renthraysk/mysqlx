@@ -219,11 +219,20 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = math.Float32frombits(binary.LittleEndian.Uint32(b[i:j]))
 
 			case mysqlx_resultset.ColumnMetaData_DATETIME:
-				t, err := unmarshalDateTime(b[i:j])
-				if err != nil {
+				if column.hasContentType && mysqlx_resultset.ContentType_DATETIME(column.contentType) == mysqlx_resultset.ContentType_DATETIME_DATE {
+					var d Date
+
+					if err := d.Unmarshal(b[i:j]); err != nil {
+						return err
+					}
+					values[index] = d
+					continue
+				}
+				var dt DateTime
+				if err := dt.Unmarshal(b[i:j]); err != nil {
 					return err
 				}
-				values[index] = t
+				values[index] = dt
 
 			case mysqlx_resultset.ColumnMetaData_DECIMAL:
 				d, err := unmarshalDecimal(b[i:j])
@@ -239,8 +248,8 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_TIME:
-				t, err := unmarshalTime(b[i:j])
-				if err != nil {
+				var t Time
+				if err := t.Unmarshal(b[i:j]); err != nil {
 					return err
 				}
 				values[index] = t

@@ -2,77 +2,126 @@ package mysqlx
 
 import (
 	"encoding/binary"
-	"fmt"
-	"time"
+
+	"github.com/pkg/errors"
 )
 
-func unmarshalDateTime(b []byte) (time.Time, error) {
-	year, i := binary.Uvarint(b)
+type Date struct {
+	Year  uint64
+	Month uint64
+	Day   uint64
+}
+
+func (d *Date) Reset() {
+	d.Year, d.Month, d.Day = 0, 0, 0
+}
+
+func (d *Date) Unmarshal(b []byte) error {
+	var i, j int
+
+	d.Reset()
+
+	d.Year, i = binary.Uvarint(b)
 	if i <= 0 {
-		return time.Time{}, fmt.Errorf("failed to decode datetime year (%x)", b)
+		return errors.Errorf("failed to decode year (%x)", b)
 	}
-	month, j := binary.Uvarint(b[i:])
+	d.Month, j = binary.Uvarint(b[i:])
 	if j <= 0 {
-		return time.Time{}, fmt.Errorf("failed to decode datetime month (%x)", b)
+		return errors.Errorf("failed to decode month (%x)", b)
 	}
 	i += j
-	day, j := binary.Uvarint(b[i:])
+	d.Day, j = binary.Uvarint(b[i:])
 	if j <= 0 {
-		return time.Time{}, fmt.Errorf("failed to decode datetime day (%x)", b)
+		return errors.Errorf("failed to decode day (%x)", b)
+	}
+	return nil
+}
+
+type DateTime struct {
+	Date
+	Hour       uint64
+	Minute     uint64
+	Second     uint64
+	Nanosecond uint64
+}
+
+func (dt *DateTime) Reset() {
+	dt.Date.Reset()
+	dt.Hour, dt.Minute, dt.Second, dt.Nanosecond = 0, 0, 0, 0
+}
+
+func (dt *DateTime) Unmarshal(b []byte) error {
+	var i, j int
+
+	dt.Reset()
+
+	dt.Year, i = binary.Uvarint(b)
+	if i <= 0 {
+		return errors.Errorf("failed to decode datetime year (%x)", b)
+	}
+	dt.Month, j = binary.Uvarint(b[i:])
+	if j <= 0 {
+		return errors.Errorf("failed to decode datetime month (%x)", b)
 	}
 	i += j
-
-	var min, sec, usec uint64
-
-	hour, j := binary.Uvarint(b[i:])
+	dt.Day, j = binary.Uvarint(b[i:])
+	if j <= 0 {
+		return errors.Errorf("failed to decode datetime day (%x)", b)
+	}
+	i += j
+	dt.Hour, j = binary.Uvarint(b[i:])
 	if j > 0 {
 		i += j
-		min, j = binary.Uvarint(b[i:])
+		dt.Minute, j = binary.Uvarint(b[i:])
 		if j > 0 {
 			i += j
-			sec, j = binary.Uvarint(b[i:])
+			dt.Second, j = binary.Uvarint(b[i:])
 			if j > 0 {
 				i += j
-				usec, j = binary.Uvarint(b[i:])
+				dt.Nanosecond, j = binary.Uvarint(b[i:])
 			}
 		}
 	}
 	if j < 0 {
-		return time.Time{}, fmt.Errorf("failed to decode datetime time (%x)", b)
+		return errors.Errorf("failed to decode datetime time (%x)", b)
 	}
-	return time.Date(int(year), time.Month(month), int(day), int(hour), int(min), int(sec), int(usec)*1000, time.UTC), nil
+	return nil
 }
 
-func unmarshalTime(b []byte) (interface{}, error) {
+type Time struct {
+	Negative   bool
+	Hour       uint64
+	Minute     uint64
+	Second     uint64
+	Nanosecond uint64
+}
 
-	var min, sec, usec uint64
+func (t *Time) Reset() {
+	t.Negative = false
+	t.Hour, t.Minute, t.Second, t.Nanosecond = 0, 0, 0, 0
+}
 
-	i := 1
-	hour, j := binary.Uvarint(b[i:])
-	if j > 0 {
-		i += j
-		min, j = binary.Uvarint(b[i:])
+func (t *Time) Unmarshal(b []byte) error {
+	var i, j int
+
+	t.Reset()
+
+	t.Negative = b[0] == 0x01
+	t.Hour, i = binary.Uvarint(b[1:])
+	if i > 0 {
+		i++
+		t.Minute, j = binary.Uvarint(b[i:])
 		if j > 0 {
 			i += j
-			sec, j = binary.Uvarint(b[i:])
+			t.Second, j = binary.Uvarint(b[i:])
 			if j > 0 {
 				i += j
-				usec, j = binary.Uvarint(b[i:])
+				t.Nanosecond, j = binary.Uvarint(b[i:])
 			}
 		}
 	}
-	if j > 0 {
-		return nil, fmt.Errorf("failed to decode time (%x)", b)
+	if j < 0 {
+		return errors.Errorf("failed to decode time (%x)", b)
 	}
-
-	d := hour * uint64(time.Hour)
-	d += min * uint64(time.Minute)
-	d += sec * uint64(time.Second)
-	d += usec * uint64(time.Microsecond)
-
-	if b[0] == 0x01 {
-		return time.Duration(-int64(d)), nil
-	}
-
-	return time.Duration(d), nil
+	return nil
 }
