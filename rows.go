@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -27,6 +29,7 @@ const (
 	queryFetchRows
 	queryFetchDone
 	queryFetchDoneMoreResultSets
+	queryFetchDoneMoreOutParams
 	queryError
 	queryClosed
 )
@@ -34,13 +37,11 @@ const (
 type rows struct {
 	conn    *conn
 	state   queryState
-	err     error
 	names   []string
 	columns []*ColumnType
 	buf     [16]ColumnType
 
-	t mysqlx.ServerMessages_Type
-	b []byte
+	firstRow []byte
 }
 
 func (r *rows) readColumns(ctx context.Context) error {
@@ -60,83 +61,87 @@ func (r *rows) readColumns(ctx context.Context) error {
 		n--
 		ct := &buf[n]
 		if err := ct.Unmarshal(b); err != nil {
-			r.state = queryError
-			return err
+			return errors.Wrap(err, "failed to unmarshal column metadata")
 		}
 		r.columns = append(r.columns, ct)
 		t, b, err = r.conn.readMessage(ctx)
 	}
 	if err != nil {
-		r.state, r.err = queryError, err
 		return err
 	}
 	switch t {
+	case mysqlx.ServerMessages_RESULTSET_ROW:
+		r.state, r.firstRow = queryFetchedFirstRow, b
+
 	case mysqlx.ServerMessages_ERROR:
-		r.state, r.err = queryError, newError(b)
-		return r.err
+		r.state = queryError
+		return newError(b)
 
 	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
 		r.state = queryFetchDone
-		return nil
 
 	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
 		r.state = queryFetchDoneMoreResultSets
-		return nil
-
-	case mysqlx.ServerMessages_RESULTSET_ROW:
-		r.state = queryFetchedFirstRow
-		r.t, r.b, r.err = t, b, err
-		return nil
 	}
 	return nil
 }
 
+func (r *rows) Columns() []string {
+	if r.names == nil {
+		r.names = make([]string, len(r.columns))
+		for index, column := range r.columns {
+			r.names[index] = column.name
+		}
+	}
+	return r.names
+}
+
 func (r *rows) Close() error {
 	switch r.state {
-	case queryClosed:
-	case queryError:
+	case queryClosed, queryError:
 	default:
 		t, _, err := r.conn.readMessage(context.Background())
 		for err == nil && t != mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK {
 			t, _, err = r.conn.readMessage(context.Background())
 		}
+		r.state = queryClosed
 	}
-	r.state = queryClosed
 	return nil
 }
 
 func (r *rows) Next(values []driver.Value) error {
-	t, b, err := r.t, r.b, r.err
 	switch r.state {
-	case queryFetchedFirstRow:
-		r.state = queryFetchRows
 	case queryFetchRows:
-		t, b, err = r.conn.readMessage(context.Background())
+		t, b, err := r.conn.readMessage(context.Background())
 		if err != nil {
-			r.state, r.err = queryError, err
-			return io.EOF
+			return err
 		}
-	default:
-		return io.EOF
-	}
+		switch t {
+		case mysqlx.ServerMessages_RESULTSET_ROW:
+			return r.unmarshalRow(b, values)
+		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
+			r.state = queryFetchDone
+		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
+			r.state = queryFetchDoneMoreResultSets
+		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_OUT_PARAMS:
+			r.state = queryFetchDoneMoreOutParams
+		}
 
-	switch t {
-	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
-		r.state = queryFetchDoneMoreResultSets
-	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
-		r.state = queryFetchDone
-	case mysqlx.ServerMessages_RESULTSET_ROW:
-		return r.unmarshalRow(b, values)
+	case queryFetchedFirstRow:
+		err := r.unmarshalRow(r.firstRow, values)
+		r.state = queryFetchRows
+		r.firstRow = nil
+		return err
 	}
 	return io.EOF
 }
 
 func (r *rows) HasNextResultSet() bool {
-	return r.state == queryFetchDoneMoreResultSets
+	return r.state == queryFetchDoneMoreResultSets || r.state == queryFetchDoneMoreOutParams
 }
 
 func (r *rows) NextResultSet() error {
-	if r.state != queryFetchDoneMoreResultSets {
+	if r.state != queryFetchDoneMoreResultSets && r.state != queryFetchDoneMoreOutParams {
 		return io.EOF
 	}
 	return r.readColumns(context.Background())
@@ -248,7 +253,7 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = bit
 
 			default:
-				return fmt.Errorf("unknown mysqlx column type %d", column.fieldType)
+				return fmt.Errorf("unknown mysqlx column type %s(%d)", column.fieldType.String(), column.fieldType)
 			}
 			i = j
 			// Next column
@@ -298,4 +303,24 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 	}
 
 	return nil
+}
+
+func (r *rows) ColumnTypeDatabaseTypeName(index int) string {
+	return r.columns[index].DatabaseTypeName()
+}
+
+func (r *rows) ColumnTypeLength(index int) (int64, bool) {
+	return r.columns[index].Length()
+}
+
+func (r *rows) ColumnTypeNullable(index int) (bool, bool) {
+	return r.columns[index].Nullable()
+}
+
+func (r *rows) ColumnTypePrecisionScale(index int) (int64, int64, bool) {
+	return r.columns[index].PrecisionScale()
+}
+
+func (r *rows) ColumnTypeScanType(index int) reflect.Type {
+	return r.columns[index].ScanType()
 }

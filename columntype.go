@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"reflect"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -58,6 +60,75 @@ func (c *ColumnType) Reset() {
 	c.hasScale = false
 	c.hasCollation = false
 	c.hasContentType = false
+}
+
+func (c *ColumnType) DatabaseTypeName() string {
+	return c.fieldType.String()
+}
+
+func (c *ColumnType) Length() (int64, bool) {
+	return c.length, c.hasLength
+}
+
+func (c *ColumnType) Nullable() (bool, bool) {
+	return c.nullable, c.hasNullable
+}
+
+func (c *ColumnType) PrecisionScale() (int64, int64, bool) {
+	return c.length, c.scale, c.hasLength && c.hasScale
+}
+
+var (
+	typeUint    = reflect.TypeOf(uint64(0))
+	typeInt     = reflect.TypeOf(int64(0))
+	typeBytes   = reflect.TypeOf([]byte{})
+	typeFloat32 = reflect.TypeOf(float32(0))
+	typeFloat64 = reflect.TypeOf(float64(0))
+	typeString  = reflect.TypeOf("")
+	typeTime    = reflect.TypeOf(time.Time{})
+)
+
+func (c *ColumnType) ScanType() reflect.Type {
+	switch c.fieldType {
+	case mysqlx_resultset.ColumnMetaData_UINT:
+		return typeUint
+
+	case mysqlx_resultset.ColumnMetaData_SINT:
+		return typeInt
+
+	case mysqlx_resultset.ColumnMetaData_BYTES:
+		if c.hasContentType {
+			switch c.contentType {
+			case mysqlx_resultset.ContentType_BYTES_GEOMETRY:
+			case mysqlx_resultset.ContentType_BYTES_JSON:
+			case mysqlx_resultset.ContentType_BYTES_XML:
+			}
+		}
+		// @TODO ?!
+		if c.hasCollation && !c.collation.IsBinary() {
+			return typeString
+		}
+		return typeBytes
+
+	case mysqlx_resultset.ColumnMetaData_DATETIME:
+		return typeTime
+
+	case mysqlx_resultset.ColumnMetaData_FLOAT:
+		return typeFloat32
+
+	case mysqlx_resultset.ColumnMetaData_DOUBLE:
+		return typeFloat64
+
+	case mysqlx_resultset.ColumnMetaData_ENUM:
+		return typeString
+
+	case mysqlx_resultset.ColumnMetaData_SET:
+		return typeBytes
+
+	case mysqlx_resultset.ColumnMetaData_BIT:
+		return typeUint
+	}
+	panic(fmt.Sprintf("ColumnTypeScanType: missing support for %s", c.fieldType.String()))
 }
 
 // IsBinary returns true if column represets a binary type
