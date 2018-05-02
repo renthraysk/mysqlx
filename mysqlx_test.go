@@ -67,7 +67,7 @@ func TestFloat32(t *testing.T) {
 }
 
 func TestFloat64(t *testing.T) {
-	// @TODO math.FloaMaxFloat64 appears to get truncated on a roundtrip
+	// @TODO math.MaxFloat64 appears to get truncated on a roundtrip
 	expected := []float64{0, math.SmallestNonzeroFloat64, math.MaxFloat64 - 3.1348623157e+302}
 	in := make([]interface{}, len(expected))
 	for i := 0; i < len(expected); i++ {
@@ -108,38 +108,37 @@ func TestRowsAffected(t *testing.T) {
 	defer db.Close()
 
 	_, err := db.ExecContext(context.Background(), "CREATE TEMPORARY TABLE rowsAffected(ID INT)")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	{
 		r, err := db.ExecContext(context.Background(), "INSERT INTO rowsAffected VALUES(?)", 42)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.NotNil(t, r)
 
 		n, err := r.RowsAffected()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, n, int64(1))
 	}
 	{
 		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 9)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.NotNil(t, r)
 
 		n, err := r.RowsAffected()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, n, int64(0))
 	}
 	{
 		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 42)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.NotNil(t, r)
 
 		n, err := r.RowsAffected()
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, n, int64(1))
 	}
 }
 
 func TestMultipleResultsets(t *testing.T) {
-
 	const (
 		A int64 = 42
 		B       = "testing"
@@ -159,16 +158,12 @@ func TestMultipleResultsets(t *testing.T) {
 	defer rows.Close()
 
 	assert.True(t, rows.Next(), "rows.Next returned false")
-	if err := rows.Scan(&a); err != nil {
-		t.Fatalf("failed to scan: %s", err)
-	}
+	assert.NoError(t, rows.Scan(&a))
 	assert.Equal(t, A, a)
 	assert.False(t, rows.Next(), "rows.Next returned true")
 	assert.True(t, rows.NextResultSet(), "rows.NextResulSet returned false")
 	assert.True(t, rows.Next(), "rows.Next returned false")
-	if err := rows.Scan(&b); err != nil {
-		t.Fatalf("failed to scan: %s", err)
-	}
+	assert.NoError(t, rows.Scan(&b))
 	assert.Equal(t, B, b)
 	assert.False(t, rows.Next(), "rows.Next returned true")
 }
