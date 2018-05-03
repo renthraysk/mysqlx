@@ -100,6 +100,10 @@ func (r *rows) Close() error {
 	switch r.state {
 	case queryClosed, queryError:
 	default:
+		// We don't know if still holding any values in the buffer, so replace it for closing.
+
+		r.conn.replaceBuffer()
+
 		t, _, err := r.conn.readMessage(context.Background())
 		for err == nil && t != mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK {
 			t, _, err = r.conn.readMessage(context.Background())

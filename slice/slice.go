@@ -4,7 +4,8 @@ func Allocate(in []byte, n int) ([]byte, []byte) {
 	if nn := len(in) + n; cap(in) >= nn {
 		return in[:nn], in[len(in):nn]
 	}
-	return in, make([]byte, n, 2*n)
+	in = make([]byte, n, 2*n+8192)
+	return in, in
 }
 
 func ForAppend(in []byte, n int) (head, tail []byte) {

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/binary"
+	"io"
 	"net"
 	"time"
 
@@ -15,78 +16,45 @@ import (
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_notice"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_session"
+	"github.com/renthraysk/mysqlx/slice"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 
 type conn struct {
-	netConn   net.Conn
-	connector *Connector
-
-	buf    []byte
-	offset uint
-	length uint
-
+	netConn              net.Conn
+	connector            *Connector
+	buf                  []byte
 	authenticateContinue mysqlx_session.AuthenticateContinue
 }
 
-func (c *conn) read(ctx context.Context, n uint) ([]byte, error) {
-	if c.length < n {
-		if b := c.buf[c.offset+c.length:]; uint(len(b)) < n {
-			if uint(len(c.buf)) < n {
-				b := make([]byte, n)
-				copy(b, c.buf[c.offset:c.offset+c.length])
-				c.buf = b
-			} else {
-				copy(c.buf, c.buf[c.offset:c.offset+c.length])
-			}
-			c.offset = 0
-		}
-
-		/*
-			deadline, _ := ctx.Deadline()
-			if err := c.netConn.SetReadDeadline(deadline); err != nil {
-				return nil, err
-			}
-		*/
-		for c.length < n {
-			nn, err := c.netConn.Read(c.buf[c.offset+c.length:])
-			c.length += uint(nn)
-			if err != nil {
-				return nil, err
-			}
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
-			}
-		}
+func (c *conn) replaceBuffer() {
+	n := cap(c.buf)
+	if n < minBufferSize {
+		n = minBufferSize
 	}
-
-	c.offset += n
-	c.length -= n
-
-	return c.buf[c.offset-n : c.offset : c.offset], nil
+	c.buf = make([]byte, n)
 }
 
 func (c *conn) readMessage(ctx context.Context) (mysqlx.ServerMessages_Type, []byte, error) {
-	b, err := c.read(ctx, 5)
-	if err != nil {
+	s := c.buf[:5]
+	if _, err := io.ReadFull(c.netConn, s); err != nil {
 		return 0, nil, err
 	}
-	t := mysqlx.ServerMessages_Type(b[4])
-	n := uint(binary.LittleEndian.Uint32(b))
+	n := binary.LittleEndian.Uint32(s)
+	t := mysqlx.ServerMessages_Type(s[4])
 	if n <= 1 {
 		return t, nil, nil
 	}
-	b, err = c.read(ctx, n-1)
-	return t, b, err
+	_, s = slice.Allocate(c.buf[:0], int(n)-1)
+	if _, err := io.ReadFull(c.netConn, s); err != nil {
+		return 0, nil, err
+	}
+	return t, s, nil
 }
 
 func (c *conn) send(ctx context.Context, m msg.Msg) error {
-	c.offset = 0
-	c.length = 0
 	deadline, _ := ctx.Deadline()
 	if err := c.netConn.SetDeadline(deadline); err != nil {
 		return errors.Wrap(err, "unable to set deadline")
@@ -96,7 +64,6 @@ func (c *conn) send(ctx context.Context, m msg.Msg) error {
 }
 
 func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
-
 	r := &result{}
 
 	err := c.send(ctx, m)
@@ -344,7 +311,6 @@ readAuthenticateStartResponse:
 		return errors.Wrap(err, "failed reading AuthenticateStart response")
 	}
 	switch t {
-
 	case mysqlx.ServerMessages_ERROR:
 		return newError(b)
 

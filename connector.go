@@ -31,7 +31,7 @@ type Connector struct {
 	bufferSize int
 }
 
-const minBufferSize = 32 * 1024
+const minBufferSize = 8 * 1024
 
 // UserName returns the user name of the account to authenticate with. Part of authentication.Credentials inteface.
 func (cnn *Connector) UserName() string { return cnn.username }
