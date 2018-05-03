@@ -108,16 +108,17 @@ func (t *Time) Unmarshal(b []byte) error {
 
 	t.Negative = b[0] == 0x01
 	t.Hour, i = binary.Uvarint(b[1:])
-	if i > 0 {
-		i++
-		t.Minute, j = binary.Uvarint(b[i:])
+	if i <= 0 {
+		return errors.Errorf("failed to decode time (%x)", b)
+	}
+	i++
+	t.Minute, j = binary.Uvarint(b[i:])
+	if j > 0 {
+		i += j
+		t.Second, j = binary.Uvarint(b[i:])
 		if j > 0 {
 			i += j
-			t.Second, j = binary.Uvarint(b[i:])
-			if j > 0 {
-				i += j
-				t.Nanosecond, j = binary.Uvarint(b[i:])
-			}
+			t.Nanosecond, j = binary.Uvarint(b[i:])
 		}
 	}
 	if j < 0 {
