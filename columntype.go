@@ -6,7 +6,6 @@ import (
 	"io"
 	"math"
 	"reflect"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -79,13 +78,16 @@ func (c *ColumnType) PrecisionScale() (int64, int64, bool) {
 }
 
 var (
-	typeUint    = reflect.TypeOf(uint64(0))
-	typeInt     = reflect.TypeOf(int64(0))
-	typeBytes   = reflect.TypeOf([]byte{})
-	typeFloat32 = reflect.TypeOf(float32(0))
-	typeFloat64 = reflect.TypeOf(float64(0))
-	typeString  = reflect.TypeOf("")
-	typeTime    = reflect.TypeOf(time.Time{})
+	typeUint      = reflect.TypeOf(uint64(0))
+	typeInt       = reflect.TypeOf(int64(0))
+	typeBytes     = reflect.TypeOf([]byte{})
+	typeFloat32   = reflect.TypeOf(float32(0))
+	typeFloat64   = reflect.TypeOf(float64(0))
+	typeString    = reflect.TypeOf("")
+	typeTime      = reflect.TypeOf(Time{})
+	typeDate      = reflect.TypeOf(Date{})
+	typeDateTime  = reflect.TypeOf(DateTime{})
+	typeInterface = reflect.TypeOf(new(interface{})).Elem()
 )
 
 func (c *ColumnType) ScanType() reflect.Type {
@@ -111,6 +113,13 @@ func (c *ColumnType) ScanType() reflect.Type {
 		return typeBytes
 
 	case mysqlx_resultset.ColumnMetaData_DATETIME:
+		if c.hasContentType &&
+			mysqlx_resultset.ContentType_DATETIME(c.contentType) == mysqlx_resultset.ContentType_DATETIME_DATE {
+			return typeDate
+		}
+		return typeDateTime
+
+	case mysqlx_resultset.ColumnMetaData_TIME:
 		return typeTime
 
 	case mysqlx_resultset.ColumnMetaData_FLOAT:
@@ -128,7 +137,7 @@ func (c *ColumnType) ScanType() reflect.Type {
 	case mysqlx_resultset.ColumnMetaData_BIT:
 		return typeUint
 	}
-	panic(fmt.Sprintf("ColumnTypeScanType: missing support for %s", c.fieldType.String()))
+	return typeInterface
 }
 
 // IsBinary returns true if column represets a binary type
