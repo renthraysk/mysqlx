@@ -1,44 +1,59 @@
 package mysqlx
 
-import "fmt"
+import (
+	"math/big"
 
-func unmarshalDecimal(b []byte) (string, error) {
-	if len(b) < 2 {
-		return "", fmt.Errorf("failed to parse decimal %#v", b)
-	}
+	"github.com/cockroachdb/apd"
+	"github.com/pkg/errors"
+)
 
-	var h uint8
+type Decimal apd.Decimal
 
-	buf := [96]byte{'-'} // assume negative, easier to slice off if non -'ve
-	r := buf[:1]
+var (
+	ten     = big.NewInt(10)
+	hundred = big.NewInt(100)
+)
 
-	for _, l := range b[1:] {
-		h = l >> 4
-		if h > 9 {
+func (d *Decimal) Unmarshal(b []byte) error {
+	var y big.Int
+	var z uint8
+
+	d.Form = apd.Finite
+	d.Exponent = -int32(b[0])
+	x := &d.Coeff
+	for _, z = range b[1:] {
+		if z > 0x9F {
 			break
 		}
-		l &= 0x0F
-		if l > 9 {
-			r = append(r, '0'+h)
-			h = l
+		if z&0x0F > 0x09 {
+			x.Mul(x, ten)
+			x.Add(x, y.SetUint64(uint64(z>>4)))
 			break
 		}
-		r = append(r, '0'+h, '0'+l)
+		x.Mul(x, hundred)
+		x.Add(x, y.SetUint64(uint64((z>>4)*10+(z&0x0F))))
 	}
+	d.Negative = z == 0xD0 || z&0x0F == 0x0D
+	return nil
+}
 
-	// If not negative remove the premptive -
-	if h != 0x0B && h != 0x0D {
-		r = r[1:]
-	}
+type NullDecimal struct {
+	Decimal
+	Valid bool
+}
 
-	if s := b[0]; s > 0 {
-		i := len(r) - int(s)
-		if i < 0 {
-			return "", fmt.Errorf("scale (%d) exceeds precision (%d) in %#v", s, len(r), b)
-		}
-		r = append(r, 0)
-		copy(r[i+1:], r[i:])
-		r[i] = '.'
+func (nd *NullDecimal) Scan(src interface{}) error {
+	if src == nil {
+		nd.Valid = false
+		return nil
 	}
-	return string(r), nil
+	nd.Valid = true
+	switch v := src.(type) {
+	case []byte:
+		return nd.Decimal.Unmarshal(v)
+	case Decimal:
+		nd.Decimal = v
+		return nil
+	}
+	return errors.Errorf("unable to convert %T to Decimal", src)
 }

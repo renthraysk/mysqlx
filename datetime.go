@@ -12,14 +12,8 @@ type Date struct {
 	Day   uint64
 }
 
-func (d *Date) Reset() {
-	d.Year, d.Month, d.Day = 0, 0, 0
-}
-
 func (d *Date) Unmarshal(b []byte) error {
 	var i, j int
-
-	d.Reset()
 
 	d.Year, i = binary.Uvarint(b)
 	if i <= 0 {
@@ -37,23 +31,41 @@ func (d *Date) Unmarshal(b []byte) error {
 	return nil
 }
 
-type DateTime struct {
+type NullDate struct {
 	Date
+	Valid bool
+}
+
+func (d *NullDate) Scan(src interface{}) error {
+	if src == nil {
+		d.Valid = false
+		return nil
+	}
+	d.Valid = true
+	switch v := src.(type) {
+	case []byte:
+		return d.Date.Unmarshal(v)
+	case Date:
+		d.Date = v
+		return nil
+	}
+	return errors.Errorf("unable to convert type %T to %T", src, d)
+}
+
+type DateTime struct {
+	Year       uint64
+	Month      uint64
+	Day        uint64
 	Hour       uint64
 	Minute     uint64
 	Second     uint64
 	Nanosecond uint64
 }
 
-func (dt *DateTime) Reset() {
-	dt.Date.Reset()
-	dt.Hour, dt.Minute, dt.Second, dt.Nanosecond = 0, 0, 0, 0
-}
-
 func (dt *DateTime) Unmarshal(b []byte) error {
 	var i, j int
 
-	dt.Reset()
+	dt.Hour, dt.Minute, dt.Second, dt.Nanosecond = 0, 0, 0, 0
 
 	dt.Year, i = binary.Uvarint(b)
 	if i <= 0 {
@@ -88,6 +100,27 @@ func (dt *DateTime) Unmarshal(b []byte) error {
 	return nil
 }
 
+type NullDateTime struct {
+	DateTime
+	Valid bool
+}
+
+func (dt *NullDateTime) Scan(src interface{}) error {
+	if src == nil {
+		dt.Valid = false
+		return nil
+	}
+	dt.Valid = true
+	switch v := src.(type) {
+	case []byte:
+		return dt.DateTime.Unmarshal(v)
+	case DateTime:
+		dt.DateTime = v
+		return nil
+	}
+	return errors.Errorf("unable to convert type %T to %T", src, dt)
+}
+
 type Time struct {
 	Negative   bool
 	Hour       uint64
@@ -96,33 +129,51 @@ type Time struct {
 	Nanosecond uint64
 }
 
-func (t *Time) Reset() {
-	t.Negative = false
-	t.Hour, t.Minute, t.Second, t.Nanosecond = 0, 0, 0, 0
-}
-
 func (t *Time) Unmarshal(b []byte) error {
 	var i, j int
 
-	t.Reset()
+	t.Hour, t.Minute, t.Second, t.Nanosecond = 0, 0, 0, 0
 
 	t.Negative = b[0] == 0x01
 	t.Hour, i = binary.Uvarint(b[1:])
-	if i <= 0 {
+	if i < 0 {
 		return errors.Errorf("failed to decode time (%x)", b)
 	}
-	i++
-	t.Minute, j = binary.Uvarint(b[i:])
-	if j > 0 {
-		i += j
-		t.Second, j = binary.Uvarint(b[i:])
+	if i > 0 {
+		i++
+		t.Minute, j = binary.Uvarint(b[i:])
 		if j > 0 {
 			i += j
-			t.Nanosecond, j = binary.Uvarint(b[i:])
+			t.Second, j = binary.Uvarint(b[i:])
+			if j > 0 {
+				i += j
+				t.Nanosecond, j = binary.Uvarint(b[i:])
+			}
+		}
+		if j < 0 {
+			return errors.Errorf("failed to decode time (%x)", b)
 		}
 	}
-	if j < 0 {
-		return errors.Errorf("failed to decode time (%x)", b)
-	}
 	return nil
+}
+
+type NullTime struct {
+	Time
+	Valid bool
+}
+
+func (t *NullTime) Scan(src interface{}) error {
+	if src == nil {
+		t.Valid = false
+		return nil
+	}
+	t.Valid = true
+	switch v := src.(type) {
+	case []byte:
+		return t.Time.Unmarshal(v)
+	case Time:
+		t.Time = v
+		return nil
+	}
+	return errors.Errorf("unable to convert type %T to %T", src, t)
 }

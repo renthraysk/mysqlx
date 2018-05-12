@@ -101,12 +101,13 @@ func (r *rows) Close() error {
 	case queryClosed, queryError:
 	default:
 		// We don't know if still holding any values in the buffer, so replace it for closing.
-
 		r.conn.replaceBuffer()
-
 		t, _, err := r.conn.readMessage(context.Background())
 		for err == nil && t != mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK {
 			t, _, err = r.conn.readMessage(context.Background())
+		}
+		if err != nil {
+			return err
 		}
 		r.state = queryClosed
 	}
@@ -230,7 +231,7 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 						return err
 					}
 					values[index] = d
-					continue
+					break
 				}
 				var dt DateTime
 				if err := dt.Unmarshal(b[i:j]); err != nil {
@@ -239,8 +240,9 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = dt
 
 			case mysqlx_resultset.ColumnMetaData_DECIMAL:
-				d, err := unmarshalDecimal(b[i:j])
-				if err != nil {
+				var d Decimal
+
+				if err := d.Unmarshal(b[i:j]); err != nil {
 					return err
 				}
 				values[index] = d
