@@ -1,4 +1,4 @@
-package mysqlx
+package collation
 
 import "strconv"
 
@@ -7,7 +7,8 @@ type Collation uint64
 
 // IsBinary returns whether this Collation represents the binary collation
 func (c Collation) IsBinary() bool {
-	return c == nameToCollation["binary"]
+	n, ok := collationToName[c]
+	return ok && n == "binary"
 }
 
 func (c Collation) String() string {

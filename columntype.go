@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 
+	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
 )
 
@@ -44,7 +45,7 @@ type ColumnType struct {
 	scale       int64
 
 	hasCollation   bool
-	collation      Collation
+	collation      collation.Collation
 	hasContentType bool
 	contentType    uint32
 }
@@ -178,12 +179,12 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			i = j
 
 		case tagColumnMetaDataCollation<<3 | proto.WireVarint:
-			collation, nn := binary.Uvarint(b[i:])
+			col, nn := binary.Uvarint(b[i:])
 			if nn <= 0 {
 				return io.ErrUnexpectedEOF
 			}
 			c.hasCollation = true
-			c.collation = Collation(collation)
+			c.collation = collation.Collation(col)
 			i += uint64(nn)
 
 		case tagColumnMetaDataFractionalDigits<<3 | proto.WireVarint:

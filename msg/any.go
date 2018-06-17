@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 	"github.com/renthraysk/mysqlx/slice"
 
@@ -91,11 +92,17 @@ func appendAnyInt(p []byte, tag uint8, v int64) []byte {
 	return p
 }
 
-// appendAnyOctets appends an Any protobuf representing an octet ([]byte) value
+// appendAnyBytes appends an Any protobuf representing an octet ([]byte) value
 // tag refers to the protobuf tag index, and is assumed less to be than 16
-func appendAnyOctets(p []byte, tag uint8, o []byte) []byte {
-	n := len(o)
-	n0 := 1 + SizeVarint(uint64(n)) + n   // Scalar_Octets size
+func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType ContentType) []byte {
+	if bytes == nil {
+		return appendAnyNull(p, tag)
+	}
+	n := len(bytes)
+	n0 := 1 + SizeVarint(uint64(n)) + n // Scalar_Octets size
+	if contentType != ContentTypePlain {
+		n0 += 1 + SizeVarint(uint64(contentType))
+	}
 	n1 := 3 + SizeVarint(uint64(n0)) + n0 // Scalar size
 	n2 := 3 + SizeVarint(uint64(n1)) + n1 // Any size
 
@@ -116,19 +123,27 @@ func appendAnyOctets(p []byte, tag uint8, o []byte) []byte {
 	b[1] = byte(mysqlx_datatypes.Scalar_V_OCTETS)
 	b[2] = tagScalarOctets<<3 | proto.WireBytes
 	b = b[3+i:]
+
 	// Scalar_Octets
+	if contentType != ContentTypePlain {
+		i = binary.PutUvarint(b[1:], uint64(contentType))
+		b[0] = tagOctetContentType<<3 | proto.WireVarint
+		b = b[1+i:]
+	}
 	i = binary.PutUvarint(b[1:], uint64(n))
 	b[0] = tagOctetValue<<3 | proto.WireBytes
-
-	copy(b[1+i:], o)
+	copy(b[1+i:], bytes)
 	return p
 }
 
 // appendAnyString appends an Any protobuf representing a string value
 // tag refers to the protobuf tag index, and is assumed less to be than 16
-func appendAnyString(p []byte, tag uint8, s string) []byte {
+func appendAnyString(p []byte, tag uint8, s string, collation collation.Collation) []byte {
 	n := len(s)
-	n0 := 1 + SizeVarint(uint64(n)) + n   // Scalar_String size
+	n0 := 1 + SizeVarint(uint64(n)) + n // Scalar_String size
+	if collation != 0 {
+		n0 += 1 + SizeVarint(uint64(collation))
+	}
 	n1 := 3 + SizeVarint(uint64(n0)) + n0 // Scalar size
 	n2 := 3 + SizeVarint(uint64(n1)) + n1 // Any size
 
@@ -150,6 +165,11 @@ func appendAnyString(p []byte, tag uint8, s string) []byte {
 	b[2] = tagScalarString<<3 | proto.WireBytes
 	b = b[3+i:]
 	// Scalar_String
+	if collation != 0 {
+		i = binary.PutUvarint(b[1:], uint64(collation))
+		b[0] = tagStringCollation<<3 | proto.WireVarint
+		b = b[1+i:]
+	}
 	i = binary.PutUvarint(b[1:], uint64(n))
 	b[0] = tagStringValue<<3 | proto.WireBytes
 	copy(b[1+i:], s)

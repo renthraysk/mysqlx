@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/slice"
 
@@ -35,6 +36,10 @@ const (
 	tagStmtExecuteNamespace       = 3
 	tagStmtExecuteCompactMetadata = 4
 )
+
+type ArgAppender interface {
+	AppendArg(s *StmtExecute)
+}
 
 // StmtExecute is a builder and sender of StmtExecute proto message
 type StmtExecute []byte
@@ -79,9 +84,21 @@ func (s *StmtExecute) AppendArgInt(v int64) {
 	*s = appendAnyInt(*s, tagStmtExecuteArgs, v)
 }
 
-// AppendArgOctets appends a binary parameter
-func (s *StmtExecute) AppendArgOctets(o []byte) {
-	*s = appendAnyOctets(*s, tagStmtExecuteArgs, o)
+// AppendArgOctets appends an opaque binary parameter
+func (s *StmtExecute) AppendArgBytes(bytes []byte, contentType ContentType) {
+	*s = appendAnyBytes(*s, tagStmtExecuteArgs, bytes, contentType)
+}
+
+func (s *StmtExecute) AppendArgGeometry(geom []byte) {
+	*s = appendAnyBytes(*s, tagStmtExecuteArgs, geom, ContentTypeGeometry)
+}
+
+func (s *StmtExecute) AppendArgJSON(json []byte) {
+	*s = appendAnyBytes(*s, tagStmtExecuteArgs, json, ContentTypeJSON)
+}
+
+func (s *StmtExecute) AppendArgXML(xml []byte) {
+	*s = appendAnyBytes(*s, tagStmtExecuteArgs, xml, ContentTypeXML)
 }
 
 // AppendArgTime appends a time parameter
@@ -89,12 +106,12 @@ func (s *StmtExecute) AppendArgTime(t time.Time) {
 	const fmt = "2006-01-02 15:04:05.999999999"
 	var b [len(fmt) + 16]byte
 
-	s.AppendArgOctets(t.AppendFormat(b[:0], fmt))
+	s.AppendArgBytes(t.AppendFormat(b[:0], fmt), ContentTypePlain)
 }
 
 // AppendArgString appends a string parameter
-func (s *StmtExecute) AppendArgString(str string) {
-	*s = appendAnyString(*s, tagStmtExecuteArgs, str)
+func (s *StmtExecute) AppendArgString(str string, collation collation.Collation) {
+	*s = appendAnyString(*s, tagStmtExecuteArgs, str, collation)
 }
 
 // AppendArgFloat64 appends a float64 parameter
@@ -124,9 +141,9 @@ func (s *StmtExecute) appendArgValue(value interface{}) error {
 	}
 	switch v := value.(type) {
 	case string:
-		s.AppendArgString(v)
+		s.AppendArgString(v, 0)
 	case []byte:
-		s.AppendArgOctets(v)
+		s.AppendArgBytes(v, ContentTypePlain)
 	case uint:
 		s.AppendArgUint(uint64(v))
 	case uint8:
@@ -155,7 +172,13 @@ func (s *StmtExecute) appendArgValue(value interface{}) error {
 		s.AppendArgFloat64(v)
 	case time.Time:
 		s.AppendArgTime(v)
+
 	default:
+		if a, ok := v.(ArgAppender); ok {
+			a.AppendArg(s)
+			return nil
+		}
+
 		rv := reflect.ValueOf(value)
 		switch rv.Kind() {
 		case reflect.Ptr:
@@ -186,12 +209,12 @@ func StmtValues(buf []byte, stmt string, args []driver.Value) (Msg, error) {
 // Named arguments are not supported by MySQL, and will result in a error.
 func StmtNamedValues(buf []byte, stmt string, args []driver.NamedValue) (Msg, error) {
 	s := NewStmtExecute(buf, stmt)
-	for i, arg := range args {
+	for _, arg := range args {
 		if len(arg.Name) > 0 {
 			return nil, errors.New("mysql does not support the use of Named Parameters")
 		}
 		if err := s.appendArgValue(arg.Value); err != nil {
-			return nil, errors.Wrapf(err, "unable to serialize argument %d", i)
+			return nil, errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
 		}
 	}
 	return s, nil

@@ -257,6 +257,9 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 	case uint8, uint16, uint32, uint, int8, int16, int32, int:
 		// Supported via conversion to a type in above case.
 	default:
+		if _, ok := nv.Value.(msg.ArgAppender); ok {
+			return nil
+		}
 		return errors.Errorf("Unsupported type %T", nv.Value)
 	}
 	return nil
