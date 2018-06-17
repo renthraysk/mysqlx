@@ -101,10 +101,17 @@ func (s *StmtExecute) AppendArgXML(xml []byte) {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, xml, ContentTypeXML)
 }
 
+var zeroTime = []byte{'0', '0', '0', '0', '-', '0', '0', '-', '0', '0'}
+
 // AppendArgTime appends a time parameter
 func (s *StmtExecute) AppendArgTime(t time.Time) {
 	const fmt = "2006-01-02 15:04:05.999999999"
 	var b [len(fmt) + 16]byte
+
+	if t.IsZero() {
+		s.AppendArgBytes(zeroTime, ContentTypePlain)
+		return
+	}
 
 	s.AppendArgBytes(t.AppendFormat(b[:0], fmt), ContentTypePlain)
 }
