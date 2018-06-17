@@ -7,7 +7,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Decimal apd.Decimal
+type Decimal struct {
+	apd.Decimal
+}
 
 var (
 	ten     = big.NewInt(10)
