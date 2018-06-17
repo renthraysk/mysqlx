@@ -33,7 +33,7 @@ func TestSerialization(t *testing.T) {
 			for _, v := range in.Args {
 				s.appendArgValue(v)
 			}
-			if err := proto.Unmarshal(s[HeaderSize:], &out); err != nil {
+			if err := proto.Unmarshal(s[headerSize:], &out); err != nil {
 				t.Fatalf("failed to unmarshal: %s", err)
 			}
 			if string(out.Stmt) != in.Stmt {

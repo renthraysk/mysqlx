@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	HeaderSize = 5
+	headerSize = 5
 )
 
 // Msg generic interface for client to server messages.
@@ -28,14 +28,14 @@ func (m MsgBytes) WriteTo(w io.Writer) (int64, error) {
 
 // ConnectionClose appends the client close message to buf, and returns Msg to send to server
 func ConnectionClose(buf []byte) MsgBytes {
-	_, b := slice.Allocate(buf, HeaderSize)
+	_, b := slice.Allocate(buf, headerSize)
 	b[4] = byte(mysqlx.ClientMessages_CON_CLOSE)
 	return MsgBytes(b)
 }
 
 // SessionReset appends the client session reset message to buf, and returns Msg to send to server
 func SessionReset(buf []byte) MsgBytes {
-	_, b := slice.Allocate(buf, HeaderSize)
+	_, b := slice.Allocate(buf, headerSize)
 	b[4] = byte(mysqlx.ClientMessages_SESS_RESET)
 	return MsgBytes(b)
 }
