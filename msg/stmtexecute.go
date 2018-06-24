@@ -84,7 +84,7 @@ func (s *StmtExecute) AppendArgInt(v int64) {
 	*s = appendAnyInt(*s, tagStmtExecuteArgs, v)
 }
 
-// AppendArgOctets appends an opaque binary parameter
+// AppendArgBytes appends an binary parameter
 func (s *StmtExecute) AppendArgBytes(bytes []byte, contentType ContentType) {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, bytes, contentType)
 }
