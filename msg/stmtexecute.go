@@ -38,7 +38,7 @@ const (
 )
 
 type ArgAppender interface {
-	AppendArg(s *StmtExecute)
+	AppendArg(s *StmtExecute) error
 }
 
 // StmtExecute is a builder and sender of StmtExecute proto message
@@ -89,16 +89,19 @@ func (s *StmtExecute) AppendArgBytes(bytes []byte, contentType ContentType) {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, bytes, contentType)
 }
 
-func (s *StmtExecute) AppendArgGeometry(geom []byte) {
+func (s *StmtExecute) AppendArgGeometry(geom []byte) error {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, geom, ContentTypeGeometry)
+	return nil
 }
 
-func (s *StmtExecute) AppendArgJSON(json []byte) {
+func (s *StmtExecute) AppendArgJSON(json []byte) error {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, json, ContentTypeJSON)
+	return nil
 }
 
-func (s *StmtExecute) AppendArgXML(xml []byte) {
+func (s *StmtExecute) AppendArgXML(xml []byte) error {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, xml, ContentTypeXML)
+	return nil
 }
 
 var zeroTime = []byte{'0', '0', '0', '0', '-', '0', '0', '-', '0', '0'}
@@ -182,8 +185,7 @@ func (s *StmtExecute) appendArgValue(value interface{}) error {
 
 	default:
 		if a, ok := v.(ArgAppender); ok {
-			a.AppendArg(s)
-			return nil
+			return a.AppendArg(s)
 		}
 
 		rv := reflect.ValueOf(value)
