@@ -237,9 +237,7 @@ func (c *conn) Begin() (driver.Tx, error) {
 }
 
 func (c *conn) Ping(ctx context.Context) error {
-	ping := msg.NewStmtExecute(c.buf[:0], "ping")
-	ping.SetNamespace("mysqlx")
-	_, err := c.execMsg(ctx, ping)
+	_, err := c.execMsg(ctx, msg.Ping(c.buf[:0]))
 	return err
 }
 
