@@ -9,6 +9,8 @@ import (
 type result struct {
 	lastInsertID uint64 // protocol defines as uint64, database/sql as int64
 	rowsAffected uint64 // protocol defines as uint64, database/sql as int64
+	rowsMatched  uint64
+	rowsFound    uint64
 }
 
 // ErrInt64Overflow is the error return when an int64

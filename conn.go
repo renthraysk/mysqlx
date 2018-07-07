@@ -27,6 +27,8 @@ type conn struct {
 	connector            *Connector
 	buf                  []byte
 	authenticateContinue mysqlx_session.AuthenticateContinue
+
+	clientID uint64
 }
 
 func (c *conn) replaceBuffer() {
@@ -125,11 +127,20 @@ readExecResponse:
 					r.rowsAffected = u
 				}
 			case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
+				if u, ok := ScalarUint(s.Value); ok {
+					r.rowsFound = u
+				}
 			case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
+				if u, ok := ScalarUint(s.Value); ok {
+					r.rowsMatched = u
+				}
 			case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
 			case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
 			case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
 			case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
+				if u, ok := ScalarUint(s.Value); ok {
+					c.clientID = u
+				}
 			}
 		}
 		goto readExecResponse
@@ -296,7 +307,8 @@ func (c *conn) authenticate(ctx context.Context) error {
 	default:
 		// @TODO Need to decide what to do here..
 		// https://dev.mysql.com/doc/refman/8.0/en/x-plugin-sha2-cache-plugin.html
-		// Current feeling is to not allow authentication with sha2 over non secure connections, as cannot initially populate the cache without TLS.
+		// Current feeling is to not allow authentication with sha2 over non secure connections,
+		// as cannot initially populate the cache without TLS.
 	}
 	return err
 }
