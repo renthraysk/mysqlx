@@ -1,22 +1,22 @@
 package msg
 
-const namespace = "mysqlx"
+const xnamespace = "mysqlx"
 
 func Ping(buf []byte) Msg {
 	s := NewStmtExecute(buf, "ping")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	return s
 }
 
 func ListClients(buf []byte) Msg {
 	s := NewStmtExecute(buf, "list_clients")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	return s
 }
 
 func KillClient(buf []byte, id uint64) Msg {
 	s := NewStmtExecute(buf, "kill_client")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	s.AppendArgUint(id)
 	return s
 }
@@ -39,20 +39,20 @@ const (
 
 func ListNotices(buf []byte) Msg {
 	s := NewStmtExecute(buf, "list_notices")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	return s
 }
 
 func DisableNotices(buf []byte, notice Notice) Msg {
 	s := NewStmtExecute(buf, "disable_notices")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	s.AppendArgString(string(notice), 0)
 	return s
 }
 
 func EnableNotices(buf []byte, notice Notice) Msg {
 	s := NewStmtExecute(buf, "enable_notices")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	s.AppendArgString(string(notice), 0)
 	return s
 }
@@ -61,7 +61,7 @@ func EnableNotices(buf []byte, notice Notice) Msg {
 
 func CreateCollection(buf []byte, database, name string) Msg {
 	s := NewStmtExecute(buf, "create_collection")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	s.AppendArgString(database, 0)
 	s.AppendArgString(name, 0)
 	return s
@@ -69,14 +69,14 @@ func CreateCollection(buf []byte, database, name string) Msg {
 
 func CreateCollectionIndex(buf []byte) Msg {
 	s := NewStmtExecute(buf, "create_collection_index")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	// @TODO
 	return s
 }
 
 func ListObjects(buf []byte, database, like string) Msg {
 	s := NewStmtExecute(buf, "list_objects")
-	s.SetNamespace(namespace)
+	s.SetNamespace(xnamespace)
 	if database != "" {
 		s.AppendArgString(database, 0)
 		if like != "" {
