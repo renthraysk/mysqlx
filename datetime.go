@@ -2,6 +2,7 @@ package mysqlx
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/pkg/errors"
 )
@@ -10,6 +11,10 @@ type Date struct {
 	Year  uint64
 	Month uint64
 	Day   uint64
+}
+
+func (d Date) String() string {
+	return fmt.Sprintf("%04d-%02d-%02d", d.Year, d.Month, d.Day)
 }
 
 func (d *Date) Unmarshal(b []byte) error {
@@ -155,6 +160,19 @@ func (t *Time) Unmarshal(b []byte) error {
 		}
 	}
 	return nil
+}
+
+func (t Time) String() string {
+	if t.Negative {
+		if t.Nanosecond > 0 {
+			return fmt.Sprintf("-%02d:%02d:%02d.%09d", t.Hour, t.Minute, t.Second, t.Nanosecond)
+		}
+		return fmt.Sprintf("-%02d:%02d:%02d", t.Hour, t.Minute, t.Second)
+	}
+	if t.Nanosecond > 0 {
+		return fmt.Sprintf("%02d:%02d:%02d.%09d", t.Hour, t.Minute, t.Second, t.Nanosecond)
+	}
+	return fmt.Sprintf("%02d:%02d:%02d", t.Hour, t.Minute, t.Second)
 }
 
 type NullTime struct {
