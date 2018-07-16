@@ -23,12 +23,12 @@ import (
 )
 
 type conn struct {
-	netConn              net.Conn
-	connector            *Connector
-	buf                  []byte
-	authenticateContinue mysqlx_session.AuthenticateContinue
+	netConn   net.Conn
+	connector *Connector
+	buf       []byte
 
-	clientID uint64
+	hasClientID bool
+	clientID    uint64
 }
 
 func (c *conn) replaceBuffer() {
@@ -66,89 +66,79 @@ func (c *conn) send(ctx context.Context, m msg.Msg) error {
 }
 
 func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
+	if err := c.send(ctx, m); err != nil {
+		return nil, err
+	}
 	r := &result{}
-
-	err := c.send(ctx, m)
-	if err != nil {
-		return nil, err
-	}
-readExecResponse:
-	t, b, err := c.readMessage(ctx)
-	if err != nil {
-		return nil, err
-	}
-	switch t {
-	case mysqlx.ServerMessages_OK:
-		return nil, nil
-
-	case mysqlx.ServerMessages_ERROR:
-		return nil, newError(b)
-
-	case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-		break
-
-	case mysqlx.ServerMessages_NOTICE:
-		var f mysqlx_notice.Frame
-
-		if err := proto.Unmarshal(b, &f); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal Frame")
+	for {
+		t, b, err := c.readMessage(ctx)
+		if err != nil {
+			return nil, err
 		}
+		switch t {
+		case mysqlx.ServerMessages_OK:
+			return r, nil
 
-		switch mysqlx_notice.Frame_Type(f.GetType()) {
-		case mysqlx_notice.Frame_WARNING:
-			var w mysqlx_notice.Warning
+		case mysqlx.ServerMessages_ERROR:
+			return nil, newError(b)
 
-			if err := proto.Unmarshal(f.Payload, &w); err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal Warning")
+		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
+			return r, nil
+
+		case mysqlx.ServerMessages_NOTICE:
+			var f mysqlx_notice.Frame
+
+			if err := proto.Unmarshal(b, &f); err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal Frame")
 			}
 
-		case mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED:
-			var v mysqlx_notice.SessionVariableChanged
+			switch mysqlx_notice.Frame_Type(f.GetType()) {
+			case mysqlx_notice.Frame_WARNING:
+				var w mysqlx_notice.Warning
 
-			if err := proto.Unmarshal(f.Payload, &v); err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal SessionVariableChanged")
-			}
+				if err := proto.Unmarshal(f.Payload, &w); err != nil {
+					return nil, errors.Wrap(err, "failed to unmarshal Warning")
+				}
 
-		case mysqlx_notice.Frame_SESSION_STATE_CHANGED:
-			var s mysqlx_notice.SessionStateChanged
+			case mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED:
+				var v mysqlx_notice.SessionVariableChanged
 
-			if err := proto.Unmarshal(f.Payload, &s); err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal SessionStateChanged")
+				if err := proto.Unmarshal(f.Payload, &v); err != nil {
+					return nil, errors.Wrap(err, "failed to unmarshal SessionVariableChanged")
+				}
+
+			case mysqlx_notice.Frame_SESSION_STATE_CHANGED:
+				var s mysqlx_notice.SessionStateChanged
+
+				if err := proto.Unmarshal(f.Payload, &s); err != nil {
+					return nil, errors.Wrap(err, "failed to unmarshal SessionStateChanged")
+				}
+				switch s.GetParam() {
+				case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
+				case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
+				case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
+					r.lastInsertID, r.hasLastInsertID = ScalarUint(s.Value)
+
+				case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
+					r.rowsAffected, r.hasRowsAffected = ScalarUint(s.Value)
+
+				case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
+					r.rowsFound, r.hasRowsFound = ScalarUint(s.Value)
+
+				case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
+					r.rowsMatched, r.hasRowsMatched = ScalarUint(s.Value)
+
+				case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
+				case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
+				case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
+
+				case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
+					c.clientID, c.hasClientID = ScalarUint(s.Value)
+				}
 			}
-			switch s.GetParam() {
-			case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
-			case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
-			case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
-				if u, ok := ScalarUint(s.Value); ok {
-					r.lastInsertID = u
-				}
-			case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
-				if u, ok := ScalarUint(s.Value); ok {
-					r.rowsAffected = u
-				}
-			case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
-				if u, ok := ScalarUint(s.Value); ok {
-					r.rowsFound = u
-				}
-			case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
-				if u, ok := ScalarUint(s.Value); ok {
-					r.rowsMatched = u
-				}
-			case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
-			case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
-			case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
-			case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
-				if u, ok := ScalarUint(s.Value); ok {
-					c.clientID = u
-				}
-			}
+		default:
 		}
-		goto readExecResponse
-
-	default:
-		goto readExecResponse
 	}
-	return r, nil
 }
 
 func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Result, error) {
@@ -190,11 +180,15 @@ func (c *conn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (c *conn) Close() error {
+	return c.closeContext(context.Background())
+}
+
+func (c *conn) closeContext(ctx context.Context) error {
 	if c.netConn == nil {
 		return nil
 	}
-	err := c.send(context.Background(), msg.ConnectionClose(c.buf[:0]))
-	_, _, _ = c.readMessage(context.Background())
+	err := c.send(ctx, msg.ConnectionClose(c.buf[:0]))
+	_, _, _ = c.readMessage(ctx)
 	errClose := c.netConn.Close()
 	c.netConn = nil
 	if err != nil {
@@ -339,10 +333,12 @@ readAuthenticateStartResponse:
 		if !ok {
 			return errors.New("unexpected AuthenticateContinue")
 		}
-		if err := proto.Unmarshal(b, &c.authenticateContinue); err != nil {
+
+		var ac mysqlx_session.AuthenticateContinue
+		if err := proto.Unmarshal(b, &ac); err != nil {
 			return errors.Wrap(err, "failed to unmarshal AuthenticateContinue")
 		}
-		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, c.authenticateContinue.AuthData)); err != nil {
+		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, ac.AuthData)); err != nil {
 			return errors.Wrap(err, "failed sending AuthenticateContinue")
 		}
 	readAuthenticateContinueResponse:
