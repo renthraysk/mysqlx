@@ -311,56 +311,56 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 	if err := c.send(ctx, starter.Start(c.buf[:0], c.connector)); err != nil {
 		return err
 	}
-
-readAuthenticateStartResponse:
-	t, b, err := c.readMessage(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed reading AuthenticateStart response")
-	}
-	switch t {
-	case mysqlx.ServerMessages_ERROR:
-		return newError(b)
-
-	case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
-		// log.Printf("Authenticated via %T", starter)
-		return nil
-
-	case mysqlx.ServerMessages_NOTICE:
-		goto readAuthenticateStartResponse
-
-	case mysqlx.ServerMessages_SESS_AUTHENTICATE_CONTINUE:
-		continuer, ok := starter.(authentication.StartContinuer)
-		if !ok {
-			return errors.New("unexpected AuthenticateContinue")
-		}
-
-		var ac mysqlx_session.AuthenticateContinue
-		if err := proto.Unmarshal(b, &ac); err != nil {
-			return errors.Wrap(err, "failed to unmarshal AuthenticateContinue")
-		}
-		if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, ac.AuthData)); err != nil {
-			return errors.Wrap(err, "failed sending AuthenticateContinue")
-		}
-	readAuthenticateContinueResponse:
+	for {
 		t, b, err := c.readMessage(ctx)
 		if err != nil {
-			return errors.Wrap(err, "failed reading AuthenticateContinue response")
+			return errors.Wrap(err, "failed reading AuthenticateStart response")
 		}
 		switch t {
+		case mysqlx.ServerMessages_NOTICE:
+			continue
+
 		case mysqlx.ServerMessages_ERROR:
 			return newError(b)
 
-		case mysqlx.ServerMessages_NOTICE:
-			goto readAuthenticateContinueResponse
-
 		case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
-			//			log.Printf("Authenticated via %T", starter)
 			return nil
 
+		case mysqlx.ServerMessages_SESS_AUTHENTICATE_CONTINUE:
+			continuer, ok := starter.(authentication.StartContinuer)
+			if !ok {
+				return errors.New("unexpected AuthenticateContinue")
+			}
+
+			var ac mysqlx_session.AuthenticateContinue
+			if err := proto.Unmarshal(b, &ac); err != nil {
+				return errors.Wrap(err, "failed to unmarshal AuthenticateContinue")
+			}
+			if err := c.send(ctx, continuer.Continue(c.buf[:0], c.connector, ac.AuthData)); err != nil {
+				return errors.Wrap(err, "failed sending AuthenticateContinue")
+			}
+
+			for {
+				t, b, err := c.readMessage(ctx)
+				if err != nil {
+					return errors.Wrap(err, "failed reading AuthenticateContinue response")
+				}
+				switch t {
+				case mysqlx.ServerMessages_NOTICE:
+					continue
+
+				case mysqlx.ServerMessages_ERROR:
+					return newError(b)
+
+				case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
+					return nil
+
+				default:
+					return errors.Errorf("unexpected server response to AuthenticateContinue %s(%d)", t.String(), t)
+				}
+			}
 		default:
-			return errors.Errorf("unexpected server response to AuthenticateContinue %s(%d)", t.String(), t)
+			return errors.Errorf("unexpected server response to AuthenticateStart %s(%d)", t.String(), t)
 		}
-	default:
 	}
-	return errors.Errorf("unexpected server response to AuthenticateStart %s(%d)", t.String(), t)
 }
