@@ -182,12 +182,10 @@ func (s *StmtExecute) appendArgValue(value interface{}) error {
 		s.AppendArgFloat64(v)
 	case time.Time:
 		s.AppendArgTime(v)
-
 	default:
 		if a, ok := v.(ArgAppender); ok {
 			return a.AppendArg(s)
 		}
-
 		rv := reflect.ValueOf(value)
 		switch rv.Kind() {
 		case reflect.Ptr:
@@ -220,7 +218,7 @@ func StmtNamedValues(buf []byte, stmt string, args []driver.NamedValue) (Msg, er
 	s := NewStmtExecute(buf, stmt)
 	for _, arg := range args {
 		if len(arg.Name) > 0 {
-			return nil, errors.New("mysql does not support the use of Named Parameters")
+			return nil, errors.New("mysql does not support the use of named parameters")
 		}
 		if err := s.appendArgValue(arg.Value); err != nil {
 			return nil, errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
