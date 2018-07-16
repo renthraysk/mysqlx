@@ -18,3 +18,28 @@ func ScalarString(s *mysqlx_datatypes.Scalar) (string, bool) {
 	//@TODO Collation?
 	return string(s.VString.Value), true
 }
+
+func ScalarValue(s *mysqlx_datatypes.Scalar) (interface{}, bool) {
+	if s == nil || s.Type == nil {
+		return nil, false
+	}
+	switch *s.Type {
+	case mysqlx_datatypes.Scalar_V_SINT:
+		return s.GetVSignedInt(), true
+	case mysqlx_datatypes.Scalar_V_UINT:
+		return s.GetVUnsignedInt(), true
+	case mysqlx_datatypes.Scalar_V_STRING:
+		return s.GetVString(), true
+	case mysqlx_datatypes.Scalar_V_OCTETS:
+		return s.GetVOctets(), true
+	case mysqlx_datatypes.Scalar_V_BOOL:
+		return s.GetVBool(), true
+	case mysqlx_datatypes.Scalar_V_NULL:
+		return nil, true
+	case mysqlx_datatypes.Scalar_V_DOUBLE:
+		return s.GetVDouble(), true
+	case mysqlx_datatypes.Scalar_V_FLOAT:
+		return s.GetVFloat(), true
+	}
+	return nil, false
+}
