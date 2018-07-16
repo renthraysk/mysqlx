@@ -176,6 +176,7 @@ func TestBeginTx(t *testing.T) {
 		sql.LevelReadCommitted:   "READ-COMMITTED",
 		sql.LevelRepeatableRead:  "REPEATABLE READ",
 		sql.LevelSerializable:    "SERIALIZABLE",
+		sql.LevelSnapshot:        "SNAPSHOT",
 	}
 
 	db := NewDB(t)
