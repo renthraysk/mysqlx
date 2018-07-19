@@ -1,6 +1,7 @@
 package mysqlx
 
 import (
+	"database/sql"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -78,20 +79,76 @@ func (c *ColumnType) PrecisionScale() (int64, int64, bool) {
 	return c.length, c.scale, c.hasLength && c.hasScale
 }
 
+type NullUint64 struct {
+	Value uint64
+	Valid bool
+}
+
 var (
-	typeUint      = reflect.TypeOf(uint64(0))
-	typeInt       = reflect.TypeOf(int64(0))
-	typeBytes     = reflect.TypeOf([]byte{})
-	typeFloat32   = reflect.TypeOf(float32(0))
-	typeFloat64   = reflect.TypeOf(float64(0))
-	typeString    = reflect.TypeOf("")
-	typeTime      = reflect.TypeOf(Time{})
-	typeDate      = reflect.TypeOf(Date{})
-	typeDateTime  = reflect.TypeOf(DateTime{})
-	typeInterface = reflect.TypeOf(new(interface{})).Elem()
+	typeUint         = reflect.TypeOf(uint64(0))
+	typeNullUint64   = reflect.TypeOf(NullUint64{})
+	typeInt          = reflect.TypeOf(int64(0))
+	typeNullInt64    = reflect.TypeOf(sql.NullInt64{})
+	typeBytes        = reflect.TypeOf([]byte{})
+	typeFloat32      = reflect.TypeOf(float32(0))
+	typeFloat64      = reflect.TypeOf(float64(0))
+	typeNullFloat64  = reflect.TypeOf(sql.NullFloat64{})
+	typeString       = reflect.TypeOf("")
+	typeNullString   = reflect.TypeOf(sql.NullString{})
+	typeTime         = reflect.TypeOf(Time{})
+	typeNullTime     = reflect.TypeOf(NullTime{})
+	typeDate         = reflect.TypeOf(Date{})
+	typeNullDate     = reflect.TypeOf(NullDate{})
+	typeDateTime     = reflect.TypeOf(DateTime{})
+	typeNullDateTime = reflect.TypeOf(NullDateTime{})
+	typeInterface    = reflect.TypeOf(new(interface{})).Elem()
 )
 
 func (c *ColumnType) ScanType() reflect.Type {
+
+	if c.hasNullable && c.nullable {
+		switch c.fieldType {
+		case mysqlx_resultset.ColumnMetaData_UINT:
+			return typeNullUint64
+		case mysqlx_resultset.ColumnMetaData_SINT:
+			return typeNullInt64
+
+		case mysqlx_resultset.ColumnMetaData_BYTES:
+			if c.hasContentType {
+				switch mysqlx_resultset.ContentType_BYTES(c.contentType) {
+				case mysqlx_resultset.ContentType_BYTES_GEOMETRY:
+				case mysqlx_resultset.ContentType_BYTES_JSON:
+				case mysqlx_resultset.ContentType_BYTES_XML:
+				}
+			}
+			// @TODO ?!
+			if c.hasCollation && !c.collation.IsBinary() {
+				return typeNullString
+			}
+			return typeBytes
+
+		case mysqlx_resultset.ColumnMetaData_DATETIME:
+			if c.hasContentType &&
+				mysqlx_resultset.ContentType_DATETIME(c.contentType) == mysqlx_resultset.ContentType_DATETIME_DATE {
+				return typeNullDate
+			}
+			return typeNullDateTime
+
+		case mysqlx_resultset.ColumnMetaData_TIME:
+			return typeNullTime
+
+		case mysqlx_resultset.ColumnMetaData_FLOAT:
+			return typeNullFloat64 // @TODO 32?
+
+		case mysqlx_resultset.ColumnMetaData_DOUBLE:
+			return typeNullFloat64
+
+		case mysqlx_resultset.ColumnMetaData_ENUM:
+			return typeNullString
+		}
+		return typeInterface
+	}
+
 	switch c.fieldType {
 	case mysqlx_resultset.ColumnMetaData_UINT:
 		return typeUint
