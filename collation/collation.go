@@ -5,6 +5,13 @@ import "strconv"
 // Collation is a mysql collation
 type Collation uint64
 
+func (c Collation) String() string {
+	if str, ok := collationMap[c]; ok {
+		return str
+	}
+	return "Collation(" + strconv.FormatUint(uint64(c), 10) + ")"
+}
+
 // IsBinary returns whether this Collation represents the binary collation
 func (c Collation) IsBinary() bool {
 	return c == Binary
@@ -285,13 +292,7 @@ var collationMap = map[Collation]string{
 	307: collationName[4410:4431],
 }
 
-func (c Collation) String() string {
-	if str, ok := collationMap[c]; ok {
-		return str
-	}
-	return "Collation(" + strconv.FormatUint(uint64(c), 10) + ")"
-}
-
+// Collations
 const (
 	Big5ChineseCi         Collation = 1
 	Latin2CzechCs         Collation = 2
