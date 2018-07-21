@@ -3,8 +3,10 @@ package mysqlx
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -89,6 +91,14 @@ func TestString(t *testing.T) {
 
 	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
 	assert.Equal(t, expected, out)
+}
+
+func TestDuration(t *testing.T) {
+
+	var d []byte
+
+	query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []interface{}{839*time.Hour - time.Second}, func(rows *sql.Rows) error { return rows.Scan(&d) })
+	fmt.Println(string(d))
 }
 
 func TestBytes(t *testing.T) {

@@ -3,6 +3,7 @@ package mysqlx
 import (
 	"encoding/binary"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -126,61 +127,44 @@ func (dt *NullDateTime) Scan(src interface{}) error {
 	return errors.Errorf("unable to convert type %T to %T", src, dt)
 }
 
-type Time struct {
-	Negative   bool
-	Hour       uint64
-	Minute     uint64
-	Second     uint64
-	Nanosecond uint64
-}
+func parseDuration(b []byte) (time.Duration, error) {
 
-func (t *Time) Unmarshal(b []byte) error {
-	var i, j int
-
-	t.Hour, t.Minute, t.Second, t.Nanosecond = 0, 0, 0, 0
-
-	t.Negative = b[0] == 0x01
-	t.Hour, i = binary.Uvarint(b[1:])
+	v, i := binary.Uvarint(b[1:])
 	if i < 0 {
-		return errors.Errorf("failed to decode time (%x)", b)
+		return 0, errors.Errorf("failed to decode time (%x)", b)
 	}
+	d := time.Duration(v) * time.Hour
 	if i > 0 {
 		i++
-		t.Minute, j = binary.Uvarint(b[i:])
+		v, j := binary.Uvarint(b[i:])
 		if j > 0 {
+			d += time.Duration(v) * time.Minute
 			i += j
-			t.Second, j = binary.Uvarint(b[i:])
+			v, j = binary.Uvarint(b[i:])
 			if j > 0 {
+				d += time.Duration(v) * time.Second
 				i += j
-				t.Nanosecond, j = binary.Uvarint(b[i:])
+				v, j = binary.Uvarint(b[i:])
+				d += time.Duration(v)
 			}
 		}
 		if j < 0 {
-			return errors.Errorf("failed to decode time (%x)", b)
+			return 0, errors.Errorf("failed to decode time (%x)", b)
 		}
 	}
-	return nil
+
+	if b[0] == 0x01 {
+		return -d, nil
+	}
+	return d, nil
 }
 
-func (t Time) String() string {
-	if t.Negative {
-		if t.Nanosecond > 0 {
-			return fmt.Sprintf("-%02d:%02d:%02d.%09d", t.Hour, t.Minute, t.Second, t.Nanosecond)
-		}
-		return fmt.Sprintf("-%02d:%02d:%02d", t.Hour, t.Minute, t.Second)
-	}
-	if t.Nanosecond > 0 {
-		return fmt.Sprintf("%02d:%02d:%02d.%09d", t.Hour, t.Minute, t.Second, t.Nanosecond)
-	}
-	return fmt.Sprintf("%02d:%02d:%02d", t.Hour, t.Minute, t.Second)
-}
-
-type NullTime struct {
-	Time
+type NullDuration struct {
+	time.Duration
 	Valid bool
 }
 
-func (t *NullTime) Scan(src interface{}) error {
+func (t *NullDuration) Scan(src interface{}) error {
 	if src == nil {
 		t.Valid = false
 		return nil
@@ -188,9 +172,12 @@ func (t *NullTime) Scan(src interface{}) error {
 	t.Valid = true
 	switch v := src.(type) {
 	case []byte:
-		return t.Time.Unmarshal(v)
-	case Time:
-		t.Time = v
+		d, err := parseDuration(v)
+		t.Duration = d
+		return err
+
+	case time.Duration:
+		t.Duration = v
 		return nil
 	}
 	return errors.Errorf("unable to convert type %T to %T", src, t)

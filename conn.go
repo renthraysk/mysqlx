@@ -254,11 +254,19 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 	if nv.Value == nil {
 		return nil
 	}
-	switch nv.Value.(type) {
+	switch v := nv.Value.(type) {
 	case uint64, int64, string, []byte, float32, float64, bool, time.Time:
 		// Protocol supported types.
 	case uint8, uint16, uint32, uint, int8, int16, int32, int:
 		// Supported via conversion to a type in above case.
+	case time.Duration:
+		const max = 838*time.Hour + 59*time.Minute + 59*time.Second
+		if v > max {
+			return errors.Errorf("time.Duration overflows mysql TIME (838:59:59)")
+		}
+		if v < -max {
+			return errors.Errorf("time.Duration underflows mysql TIME (-838:59:59)")
+		}
 	default:
 		if _, ok := nv.Value.(msg.ArgAppender); ok {
 			return nil

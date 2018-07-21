@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/renthraysk/mysqlx/collation"
@@ -139,6 +140,34 @@ func (s *StmtExecute) AppendArgBool(b bool) {
 	*s = appendAnyBool(*s, tagStmtExecuteArgs, b)
 }
 
+const smallsString = "00010203040506070809" +
+	"10111213141516171819" +
+	"20212223242526272829" +
+	"30313233343536373839" +
+	"40414243444546474849" +
+	"50515253545556575859"
+
+func (s *StmtExecute) AppendArgDuration(d time.Duration) error {
+	var buf [1 + 20 + 1 + 2 + 1 + 2]byte
+
+	b := buf[:0]
+	if d < 0 {
+		d = -d
+		b = append(b, '-')
+	}
+	if d > 838*time.Hour+59*time.Minute+59*time.Second {
+		return errors.New("time.Duration outside TIME range [-838:59:59, 838:59:59]")
+	}
+
+	b = strconv.AppendUint(b, uint64(d/time.Hour), 10)
+	i := 2 * (uint(d/time.Minute) % 60)
+	j := 2 * (uint(d/time.Second) % 60)
+	b = append(b, ':', smallsString[i], smallsString[i+1],
+		':', smallsString[j], smallsString[j+1])
+	s.AppendArgBytes(b, ContentTypePlain)
+	return nil
+}
+
 // AppendArgNull appends a NULL parameter
 func (s *StmtExecute) AppendArgNull() {
 	*s = appendAnyNull(*s, tagStmtExecuteArgs)
@@ -182,6 +211,8 @@ func (s *StmtExecute) appendArgValue(value interface{}) error {
 		s.AppendArgFloat64(v)
 	case time.Time:
 		s.AppendArgTime(v)
+	case time.Duration:
+		s.AppendArgDuration(v)
 	default:
 		if a, ok := v.(ArgAppender); ok {
 			return a.AppendArg(s)

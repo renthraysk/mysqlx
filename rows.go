@@ -254,11 +254,11 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = b[i : j-1 : j-1]
 
 			case mysqlx_resultset.ColumnMetaData_TIME:
-				var t Time
-				if err := t.Unmarshal(b[i:j]); err != nil {
+				d, err := parseDuration(b)
+				if err != nil {
 					return err
 				}
-				values[index] = t
+				values[index] = d
 
 			case mysqlx_resultset.ColumnMetaData_BIT:
 				bit, nn := binary.Uvarint(b[i:j])

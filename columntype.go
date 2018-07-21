@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -95,8 +96,8 @@ var (
 	typeNullFloat64  = reflect.TypeOf(sql.NullFloat64{})
 	typeString       = reflect.TypeOf("")
 	typeNullString   = reflect.TypeOf(sql.NullString{})
-	typeTime         = reflect.TypeOf(Time{})
-	typeNullTime     = reflect.TypeOf(NullTime{})
+	typeDuration     = reflect.TypeOf(time.Duration(0))
+	typeNullDuration = reflect.TypeOf(NullDuration{})
 	typeDate         = reflect.TypeOf(Date{})
 	typeNullDate     = reflect.TypeOf(NullDate{})
 	typeDateTime     = reflect.TypeOf(DateTime{})
@@ -135,7 +136,7 @@ func (c *ColumnType) ScanType() reflect.Type {
 			return typeNullDateTime
 
 		case mysqlx_resultset.ColumnMetaData_TIME:
-			return typeNullTime
+			return typeNullDuration
 
 		case mysqlx_resultset.ColumnMetaData_FLOAT:
 			return typeNullFloat64 // @TODO 32?
@@ -178,7 +179,7 @@ func (c *ColumnType) ScanType() reflect.Type {
 		return typeDateTime
 
 	case mysqlx_resultset.ColumnMetaData_TIME:
-		return typeTime
+		return typeDuration
 
 	case mysqlx_resultset.ColumnMetaData_FLOAT:
 		return typeFloat32
