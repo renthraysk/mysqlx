@@ -128,7 +128,6 @@ func (dt *NullDateTime) Scan(src interface{}) error {
 }
 
 func parseDuration(b []byte) (time.Duration, error) {
-
 	v, i := binary.Uvarint(b[1:])
 	if i < 0 {
 		return 0, errors.Errorf("failed to decode time (%x)", b)
@@ -157,28 +156,4 @@ func parseDuration(b []byte) (time.Duration, error) {
 		return -d, nil
 	}
 	return d, nil
-}
-
-type NullDuration struct {
-	time.Duration
-	Valid bool
-}
-
-func (t *NullDuration) Scan(src interface{}) error {
-	if src == nil {
-		t.Valid = false
-		return nil
-	}
-	t.Valid = true
-	switch v := src.(type) {
-	case []byte:
-		d, err := parseDuration(v)
-		t.Duration = d
-		return err
-
-	case time.Duration:
-		t.Duration = v
-		return nil
-	}
-	return errors.Errorf("unable to convert type %T to %T", src, t)
 }

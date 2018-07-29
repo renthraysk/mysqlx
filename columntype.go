@@ -7,7 +7,6 @@ import (
 	"io"
 	"math"
 	"reflect"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -85,6 +84,32 @@ type NullUint64 struct {
 	Valid bool
 }
 
+func (n *NullUint64) Scan(src interface{}) error {
+	if src == nil {
+		n.Valid = false
+		return nil
+	}
+	switch v := src.(type) {
+	case uint64:
+		n.Value = v
+	case uint32:
+		n.Value = uint64(v)
+	case uint16:
+		n.Value = uint64(v)
+	case uint8:
+		n.Value = uint64(v)
+	case uint:
+		n.Value = uint64(v)
+	case []byte:
+		u, i := binary.Uvarint(v)
+		n.Valid = i > 0
+		n.Value = u
+	default:
+		return errors.Errorf("unable to convert type %T to NullInt64", src)
+	}
+	return nil
+}
+
 var (
 	typeUint         = reflect.TypeOf(uint64(0))
 	typeNullUint64   = reflect.TypeOf(NullUint64{})
@@ -96,8 +121,8 @@ var (
 	typeNullFloat64  = reflect.TypeOf(sql.NullFloat64{})
 	typeString       = reflect.TypeOf("")
 	typeNullString   = reflect.TypeOf(sql.NullString{})
-	typeDuration     = reflect.TypeOf(time.Duration(0))
-	typeNullDuration = reflect.TypeOf(NullDuration{})
+	typeDuration     = typeInt
+	typeNullDuration = typeNullInt64
 	typeDate         = reflect.TypeOf(Date{})
 	typeNullDate     = reflect.TypeOf(NullDate{})
 	typeDateTime     = reflect.TypeOf(DateTime{})
