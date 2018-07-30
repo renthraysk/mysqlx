@@ -219,7 +219,7 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 			start = "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"
 		}
 	default:
-		return nil, errors.Errorf("Unsupported transaction isolation level (%d)", options.Isolation)
+		return nil, errors.Errorf("Unsupported transaction isolation level (%s)", sql.IsolationLevel(options.Isolation).String())
 	}
 
 	if len(set) > 0 {
