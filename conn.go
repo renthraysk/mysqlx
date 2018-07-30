@@ -293,13 +293,13 @@ func (c *conn) enableTLS(ctx context.Context, tlsConfig *tls.Config) error {
 
 func (c *conn) authenticate(ctx context.Context) error {
 
-	const ER_ACCESS_DENIED_ERROR = 1045
+	const ErAccessDeniedError = 1045
 
 	err := c.authenticate2(ctx, c.connector.authentication)
 	if err == nil {
 		return nil
 	}
-	if e, ok := errors.Cause(err).(*Error); !ok || e.Code != ER_ACCESS_DENIED_ERROR {
+	if e, ok := errors.Cause(err).(*Error); !ok || e.Code != ErAccessDeniedError {
 		return err
 	}
 	switch c.netConn.(type) {
