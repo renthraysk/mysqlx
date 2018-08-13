@@ -20,6 +20,7 @@ func HardSessionResetter(ctx context.Context, c *conn) error {
 	if err := c.send(ctx, msg.SessionReset(c.buf[:0])); err != nil {
 		return driver.ErrBadConn
 	}
+	c.openTxCount = 0
 	if err := c.authenticate(ctx); err != nil {
 		return driver.ErrBadConn
 	}

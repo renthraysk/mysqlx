@@ -29,6 +29,8 @@ type conn struct {
 
 	hasClientID bool
 	clientID    uint64
+
+	openTxCount uint
 }
 
 func (c *conn) replaceBuffer() {
@@ -129,7 +131,17 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 					r.rowsMatched, r.hasRowsMatched = ScalarUint(s.Value)
 
 				case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
+					if c.openTxCount == 0 {
+						// Error?
+					}
+					c.openTxCount--
+
 				case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
+					if c.openTxCount == 0 {
+						// Error?
+					}
+					c.openTxCount--
+
 				case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
 
 				case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
@@ -230,6 +242,7 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 	if _, err := c.ExecContext(ctx, start, nil); err != nil {
 		return nil, err
 	}
+	c.openTxCount++
 	return &tx{c}, nil
 }
 
@@ -238,6 +251,7 @@ func (c *conn) Begin() (driver.Tx, error) {
 	if _, err := c.ExecContext(context.Background(), "START TRANSACTION", nil); err != nil {
 		return nil, err
 	}
+	c.openTxCount++
 	return &tx{c}, nil
 }
 
@@ -367,11 +381,11 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 					return nil
 
 				default:
-					return errors.Errorf("unexpected server response to AuthenticateContinue %s(%d)", t.String(), t)
+					return errors.Errorf("unexpected server response to AuthenticateContinue %s", t.String())
 				}
 			}
 		default:
-			return errors.Errorf("unexpected server response to AuthenticateStart %s(%d)", t.String(), t)
+			return errors.Errorf("unexpected server response to AuthenticateStart %s", t.String())
 		}
 	}
 }
