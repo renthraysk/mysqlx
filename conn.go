@@ -276,10 +276,10 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 	case time.Duration:
 		const max = 838*time.Hour + 59*time.Minute + 59*time.Second
 		if v > max {
-			return errors.Errorf("time.Duration overflows mysql TIME (838:59:59)")
+			return errors.New("time.Duration overflows mysql TIME (838:59:59)")
 		}
 		if v < -max {
-			return errors.Errorf("time.Duration underflows mysql TIME (-838:59:59)")
+			return errors.New("time.Duration underflows mysql TIME (-838:59:59)")
 		}
 	default:
 		if _, ok := nv.Value.(msg.ArgAppender); ok {
