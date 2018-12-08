@@ -51,7 +51,7 @@ const (
 // appendAnyUint appends an Any protobuf representing an uint64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyUint(p []byte, tag uint8, v uint64) []byte {
-	n := SizeVarint(v)
+	n := SizeUvarint64(v)
 	p, b := slice.ForAppend(p, 9+n)
 
 	// First for bounds checking elimination
@@ -74,7 +74,7 @@ func appendAnyUint(p []byte, tag uint8, v uint64) []byte {
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyInt(p []byte, tag uint8, v int64) []byte {
 	u := (uint64(v) << 1) ^ uint64(v>>63)
-	n := SizeVarint(u)
+	n := SizeUvarint64(u)
 	p, b := slice.ForAppend(p, 9+n)
 
 	binary.PutUvarint(b[9:], u)
@@ -99,14 +99,14 @@ func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType ContentType) 
 		return appendAnyNull(p, tag)
 	}
 	n := len(bytes)
-	n0 := 1 + SizeVarint(uint64(n)) + n // Scalar_Octets size
+	n0 := 1 + SizeUvarint64(uint64(n)) + n // Scalar_Octets size
 	if contentType != ContentTypePlain {
-		n0 += 1 + SizeVarint(uint64(contentType))
+		n0 += 1 + SizeUvarint64(uint64(contentType))
 	}
-	n1 := 3 + SizeVarint(uint64(n0)) + n0 // Scalar size
-	n2 := 3 + SizeVarint(uint64(n1)) + n1 // Any size
+	n1 := 3 + SizeUvarint64(uint64(n0)) + n0 // Scalar size
+	n2 := 3 + SizeUvarint64(uint64(n1)) + n1 // Any size
 
-	p, b := slice.ForAppend(p, 1+SizeVarint(uint64(n2))+n2)
+	p, b := slice.ForAppend(p, 1+SizeUvarint64(uint64(n2))+n2)
 
 	i := binary.PutUvarint(b[1:], uint64(n2))
 	b[0] = tag<<3 | proto.WireBytes
@@ -140,14 +140,14 @@ func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType ContentType) 
 // tag refers to the protobuf tag index, and is assumed less to be than 16
 func appendAnyString(p []byte, tag uint8, s string, collation collation.Collation) []byte {
 	n := len(s)
-	n0 := 1 + SizeVarint(uint64(n)) + n // Scalar_String size
+	n0 := 1 + SizeUvarint64(uint64(n)) + n // Scalar_String size
 	if collation != 0 {
-		n0 += 1 + SizeVarint(uint64(collation))
+		n0 += 1 + SizeUvarint64(uint64(collation))
 	}
-	n1 := 3 + SizeVarint(uint64(n0)) + n0 // Scalar size
-	n2 := 3 + SizeVarint(uint64(n1)) + n1 // Any size
+	n1 := 3 + SizeUvarint64(uint64(n0)) + n0 // Scalar size
+	n2 := 3 + SizeUvarint64(uint64(n1)) + n1 // Any size
 
-	p, b := slice.ForAppend(p, 1+SizeVarint(uint64(n2))+n2)
+	p, b := slice.ForAppend(p, 1+SizeUvarint64(uint64(n2))+n2)
 
 	i := binary.PutUvarint(b[1:], uint64(n2))
 	b[0] = tag<<3 | proto.WireBytes

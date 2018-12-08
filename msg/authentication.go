@@ -26,7 +26,7 @@ type AuthenticateStart []byte
 // NewAuthenticateStart marshals a AuthenticateStart protobuf message
 func NewAuthenticateStart(buf []byte, mechName string) AuthenticateStart {
 	n := len(mechName)
-	i := SizeVarint(uint64(n))
+	i := SizeUvarint64(uint64(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
 	binary.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_START)
@@ -45,7 +45,7 @@ func (a AuthenticateStart) WriteTo(w io.Writer) (int64, error) {
 // SetAuthData sets the optional authentication data, only used for plain authentication mechanism.
 func (a *AuthenticateStart) SetAuthData(authData []byte) {
 	n := len(authData)
-	i := SizeVarint(uint64(n))
+	i := SizeUvarint64(uint64(n))
 	b := *a
 	*a, b = slice.ForAppend(b, 1+i+n)
 	binary.PutUvarint(b[1:], uint64(n))
@@ -56,7 +56,7 @@ func (a *AuthenticateStart) SetAuthData(authData []byte) {
 // NewAuthenticateContinue marshals AuthenticateContinue protobuf message
 func NewAuthenticateContinue(buf []byte, authData []byte) MsgBytes {
 	n := len(authData)
-	i := SizeVarint(uint64(n))
+	i := SizeUvarint64(uint64(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
 	binary.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_CONTINUE)

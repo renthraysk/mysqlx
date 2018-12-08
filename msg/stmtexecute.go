@@ -48,7 +48,7 @@ type StmtExecute []byte
 // NewStmtExecute creates a new StmtExecute which attempts to use the unused capacity of buf.
 func NewStmtExecute(buf []byte, stmt string) StmtExecute {
 	n := len(stmt)
-	i := SizeVarint(uint64(n))
+	i := SizeUvarint64(uint64(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
 	binary.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SQL_STMT_EXECUTE)
@@ -67,7 +67,7 @@ func (s StmtExecute) WriteTo(w io.Writer) (int64, error) {
 // SetNamespace serialises the Namespace field of the StmtExecute protobuf.
 func (s *StmtExecute) SetNamespace(namespace string) {
 	n := len(namespace)
-	i := SizeVarint(uint64(n))
+	i := SizeUvarint64(uint64(n))
 	b := *s
 	*s, b = slice.ForAppend(b, 1+i+n)
 	binary.PutUvarint(b[1:], uint64(n))
@@ -153,7 +153,8 @@ func (s *StmtExecute) AppendArgDuration(d time.Duration) error {
 	b := buf[:0]
 	if d < 0 {
 		d = -d
-		b = append(b, '-')
+		b = buf[:1]
+		b[0] = '-'
 	}
 	if d > 838*time.Hour+59*time.Minute+59*time.Second {
 		return errors.New("time.Duration outside TIME range [-838:59:59, 838:59:59]")
