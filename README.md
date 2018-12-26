@@ -20,6 +20,6 @@ https://dev.mysql.com/doc/refman/8.0/en/caching-sha2-pluggable-authentication.ht
 
 	j, err := json.Marshal(expected)
     ...
-    r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", JSON(j))
+    r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", mysqlx.JSON(j))
 
 
