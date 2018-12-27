@@ -3,7 +3,6 @@ package mysqlx
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -98,7 +97,8 @@ func TestDuration(t *testing.T) {
 	var d []byte
 
 	query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []interface{}{839*time.Hour - time.Second}, func(rows *sql.Rows) error { return rows.Scan(&d) })
-	fmt.Println(string(d))
+
+	assert.Equal(t, []byte("838 59 59"), d)
 }
 
 func TestBytes(t *testing.T) {
@@ -179,7 +179,7 @@ func TestMultipleResultsets(t *testing.T) {
 }
 
 func TestBeginTx(t *testing.T) {
-	t.Skip("Can not determine current transaction's isolation level: https://bugs.mysql.com/bug.php?id=53341")
+	//	t.Skip("Can not determine current transaction's isolation level: https://bugs.mysql.com/bug.php?id=53341")
 
 	isos := map[sql.IsolationLevel]string{
 		sql.LevelReadUncommitted: "READ-UNCOMMITTED",
