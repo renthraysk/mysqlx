@@ -199,13 +199,15 @@ func (c *conn) closeContext(ctx context.Context) error {
 }
 
 func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx, error) {
-	set := ""
+	// Ensures the next transaction will use the session default isolation level if sql.LevelDefault is specified.
+	set := "SET @@transaction_isolation = @@SESSION.transaction_isolation"
 	start := "START TRANSACTION"
 	if options.ReadOnly {
 		start = "START TRANSACTION READ ONLY"
 	}
 	switch sql.IsolationLevel(options.Isolation) {
 	case sql.LevelDefault:
+
 	case sql.LevelReadUncommitted:
 		set = "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED"
 	case sql.LevelReadCommitted:
@@ -219,14 +221,13 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 		if options.ReadOnly {
 			start = "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"
 		}
+
 	default:
 		return nil, errors.Errorf("Unsupported transaction isolation level (%s)", sql.IsolationLevel(options.Isolation).String())
 	}
 
-	if len(set) > 0 {
-		if _, err := c.ExecContext(ctx, set, nil); err != nil {
-			return nil, err
-		}
+	if _, err := c.ExecContext(ctx, set, nil); err != nil {
+		return nil, err
 	}
 	if _, err := c.ExecContext(ctx, start, nil); err != nil {
 		return nil, err
@@ -361,11 +362,11 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 				case mysqlx.ServerMessages_NOTICE:
 					continue
 
-				case mysqlx.ServerMessages_ERROR:
-					return newError(b)
-
 				case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
 					return nil
+
+				case mysqlx.ServerMessages_ERROR:
+					return newError(b)
 
 				default:
 					return errors.Errorf("unexpected server response to AuthenticateContinue %s", t.String())
