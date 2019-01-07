@@ -33,13 +33,13 @@ type Connector struct {
 
 const minBufferSize = 8 * 1024
 
-// UserName returns the user name of the account to authenticate with. Part of authentication.Credentials inteface.
+// UserName returns the user name of the account to authenticate with. Part of authentication.Credentials interface.
 func (cnn *Connector) UserName() string { return cnn.username }
 
-// Password returns the password of the account to authenticate with. Part of authentication.Credentials inteface.
+// Password returns the password of the account to authenticate with. Part of authentication.Credentials interface.
 func (cnn *Connector) Password() string { return cnn.password }
 
-// Database returns the database name to authenticate with. Part of authentication.Credentials inteface.
+// Database returns the database name to authenticate with. Part of authentication.Credentials interface.
 func (cnn *Connector) Database() string { return cnn.database }
 
 // New creates a database/sql.Connector
