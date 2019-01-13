@@ -181,26 +181,48 @@ func TestMultipleResultsets(t *testing.T) {
 func TestBeginTx(t *testing.T) {
 	//	t.Skip("Can not determine current transaction's isolation level: https://bugs.mysql.com/bug.php?id=53341")
 
-	isos := map[sql.IsolationLevel]string{
-		sql.LevelReadUncommitted: "READ-UNCOMMITTED",
-		sql.LevelReadCommitted:   "READ-COMMITTED",
-		sql.LevelRepeatableRead:  "REPEATABLE READ",
-		sql.LevelSerializable:    "SERIALIZABLE",
-		sql.LevelSnapshot:        "SNAPSHOT",
+	isos := []sql.IsolationLevel{
+		sql.LevelDefault,
+		sql.LevelReadUncommitted,
+		sql.LevelReadCommitted,
+		sql.LevelRepeatableRead,
+		sql.LevelSnapshot,
+		sql.LevelSerializable,
 	}
 
 	db := NewDB(t)
 	defer db.Close()
 
-	for level, name := range isos {
-		tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level})
-		if err != nil {
-			t.Fatalf("BeginTx failed: %s for %s", err, name)
+	for _, level := range isos {
+		{
+			tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level})
+			assert.NoError(t, err)
+			tx.Rollback()
 		}
-		_, err = tx.QueryContext(context.Background(), "SELECT @@session.transaction_isolation")
-		if err != nil {
-			t.Fatalf("SELECT @@transaction_isolation failed: %s", err)
+		{
+			tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level, ReadOnly: true})
+			assert.NoError(t, err)
+			tx.Rollback()
 		}
-		tx.Rollback()
+	}
+}
+
+func TestQueryTimeout(t *testing.T) {
+
+	db := NewDB(t)
+	defer db.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err := db.ExecContext(ctx, "SELECT SLEEP(3)")
+	if err != context.DeadlineExceeded {
+		t.Errorf("ExecContext expected to fail with DeadlineExceeded but it returned %v", err)
+	}
+
+	{
+		var val int64
+		rows, err := db.Query("SELECT 42")
+		assert.NoError(t, err)
+		assert.True(t, rows.Next())
+		assert.NoError(t, rows.Scan(&val))
 	}
 }
