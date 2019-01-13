@@ -124,6 +124,7 @@ func (r *rows) Next(values []driver.Value) error {
 		switch t {
 		case mysqlx.ServerMessages_RESULTSET_ROW:
 			return r.unmarshalRow(b, values)
+
 		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
 			r.state = queryFetchDone
 		case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
@@ -146,10 +147,10 @@ func (r *rows) HasNextResultSet() bool {
 }
 
 func (r *rows) NextResultSet() error {
-	if r.state != queryFetchDoneMoreResultSets && r.state != queryFetchDoneMoreOutParams {
-		return io.EOF
+	if r.state == queryFetchDoneMoreResultSets || r.state == queryFetchDoneMoreOutParams {
+		return r.readColumns(context.Background())
 	}
-	return r.readColumns(context.Background())
+	return io.EOF
 }
 
 // unmarshalRow parses mysqlx_resultset Row protobuf
@@ -159,7 +160,6 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 
 	i := uint64(0)
 	n := uint64(len(b))
-
 	// Column index
 	index := 0
 
