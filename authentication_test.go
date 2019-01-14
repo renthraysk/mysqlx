@@ -102,12 +102,10 @@ func TestAuthentication(t *testing.T) {
 	})
 
 	t.Run("sock", func(t *testing.T) {
-		const SOCK = "/var/run/mysqld/mysqlx.sock"
-
 		socket := authTests{
 			"mysql41": {
 				"unix",
-				SOCK,
+				sockAddress,
 				[]Option{
 					WithAuthentication(mysql41.New()),
 					WithUserPassword("usernative", "passwordnative"),
@@ -115,7 +113,7 @@ func TestAuthentication(t *testing.T) {
 			},
 			"sha2": {
 				"unix",
-				SOCK,
+				sockAddress,
 				[]Option{
 					WithAuthentication(sha256.New()),
 					WithUserPassword("usersha2", "passwordsha2"),
@@ -123,7 +121,7 @@ func TestAuthentication(t *testing.T) {
 			},
 			"sha256": {
 				"unix",
-				SOCK,
+				sockAddress,
 				[]Option{
 					WithAuthentication(sha256.New()),
 					WithUserPassword("usersha256", "passwordsha256"),
