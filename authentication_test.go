@@ -27,53 +27,14 @@ func FlushAuthenticationCache(tb testing.TB) {
 	}
 }
 
-func runAuthenticationTests(t *testing.T) {
+type authTests map[string]struct {
+	network string
+	addr    string
+	options []Option
+}
+
+func runAuthenticationTests(t *testing.T, tests authTests) {
 	t.Helper()
-
-	tests := map[string]struct {
-		network string
-		addr    string
-		options []Option
-	}{
-		"tcp-mysql41": {
-			"tcp",
-			ipAddress,
-			[]Option{
-				WithAuthentication(mysql41.New()),
-				WithUserPassword("usernative", "passwordnative"),
-			},
-		},
-
-		"tls-mysql41": {
-			"tcp",
-			ipAddress,
-			[]Option{
-				WithTLSConfig(TLSInsecureSkipVerify()),
-				WithAuthentication(mysql41.New()),
-				WithUserPassword("usernative", "passwordnative"),
-			},
-		},
-
-		"tls-sha2": {
-			"tcp",
-			ipAddress,
-			[]Option{
-				WithTLSConfig(TLSInsecureSkipVerify()),
-				WithAuthentication(sha256.New()),
-				WithUserPassword("usersha2", "passwordsha2"),
-			},
-		},
-
-		"tls-sha256": {
-			"tcp",
-			ipAddress,
-			[]Option{
-				WithTLSConfig(TLSInsecureSkipVerify()),
-				WithAuthentication(sha256.New()),
-				WithUserPassword("usersha256", "passwordsha256"),
-			},
-		},
-	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -91,7 +52,87 @@ func runAuthenticationTests(t *testing.T) {
 }
 
 func TestAuthentication(t *testing.T) {
-	FlushAuthenticationCache(t)
-	t.Run("empty", runAuthenticationTests)
-	t.Run("cached", runAuthenticationTests)
+
+	t.Run("tcp", func(t *testing.T) {
+
+		tcp := authTests{
+			"mysql41": {
+				"tcp",
+				ipAddress,
+				[]Option{
+					WithAuthentication(mysql41.New()),
+					WithUserPassword("usernative", "passwordnative"),
+				},
+			},
+
+			"tls-mysql41": {
+				"tcp",
+				ipAddress,
+				[]Option{
+					WithTLSConfig(TLSInsecureSkipVerify()),
+					WithAuthentication(mysql41.New()),
+					WithUserPassword("usernative", "passwordnative"),
+				},
+			},
+
+			"tls-sha2": {
+				"tcp",
+				ipAddress,
+				[]Option{
+					WithTLSConfig(TLSInsecureSkipVerify()),
+					WithAuthentication(sha256.New()),
+					WithUserPassword("usersha2", "passwordsha2"),
+				},
+			},
+
+			"tls-sha256": {
+				"tcp",
+				ipAddress,
+				[]Option{
+					WithTLSConfig(TLSInsecureSkipVerify()),
+					WithAuthentication(sha256.New()),
+					WithUserPassword("usersha256", "passwordsha256"),
+				},
+			},
+		}
+
+		FlushAuthenticationCache(t)
+		t.Run("empty", func(t *testing.T) { runAuthenticationTests(t, tcp) })
+		t.Run("cached", func(t *testing.T) { runAuthenticationTests(t, tcp) })
+	})
+
+	t.Run("sock", func(t *testing.T) {
+		const SOCK = "/var/run/mysqld/mysqlx.sock"
+
+		socket := authTests{
+			"mysql41": {
+				"unix",
+				SOCK,
+				[]Option{
+					WithAuthentication(mysql41.New()),
+					WithUserPassword("usernative", "passwordnative"),
+				},
+			},
+			"sha2": {
+				"unix",
+				SOCK,
+				[]Option{
+					WithAuthentication(sha256.New()),
+					WithUserPassword("usersha2", "passwordsha2"),
+				},
+			},
+			"sha256": {
+				"unix",
+				SOCK,
+				[]Option{
+					WithAuthentication(sha256.New()),
+					WithUserPassword("usersha256", "passwordsha256"),
+				},
+			},
+		}
+
+		FlushAuthenticationCache(t)
+		t.Run("empty", func(t *testing.T) { runAuthenticationTests(t, socket) })
+		t.Run("cached", func(t *testing.T) { runAuthenticationTests(t, socket) })
+	})
 }
