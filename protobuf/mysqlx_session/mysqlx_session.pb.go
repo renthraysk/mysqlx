@@ -65,7 +65,7 @@ func (m *AuthenticateStart) Reset()         { *m = AuthenticateStart{} }
 func (m *AuthenticateStart) String() string { return proto.CompactTextString(m) }
 func (*AuthenticateStart) ProtoMessage()    {}
 func (*AuthenticateStart) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_session_fdd9d06bb5e0f754, []int{0}
+	return fileDescriptor_mysqlx_session_0bce2fe506fb34de, []int{0}
 }
 func (m *AuthenticateStart) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AuthenticateStart.Unmarshal(m, b)
@@ -122,7 +122,7 @@ func (m *AuthenticateContinue) Reset()         { *m = AuthenticateContinue{} }
 func (m *AuthenticateContinue) String() string { return proto.CompactTextString(m) }
 func (*AuthenticateContinue) ProtoMessage()    {}
 func (*AuthenticateContinue) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_session_fdd9d06bb5e0f754, []int{1}
+	return fileDescriptor_mysqlx_session_0bce2fe506fb34de, []int{1}
 }
 func (m *AuthenticateContinue) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AuthenticateContinue.Unmarshal(m, b)
@@ -163,7 +163,7 @@ func (m *AuthenticateOk) Reset()         { *m = AuthenticateOk{} }
 func (m *AuthenticateOk) String() string { return proto.CompactTextString(m) }
 func (*AuthenticateOk) ProtoMessage()    {}
 func (*AuthenticateOk) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_session_fdd9d06bb5e0f754, []int{2}
+	return fileDescriptor_mysqlx_session_0bce2fe506fb34de, []int{2}
 }
 func (m *AuthenticateOk) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AuthenticateOk.Unmarshal(m, b)
@@ -203,7 +203,7 @@ func (m *Reset) Reset()         { *m = Reset{} }
 func (m *Reset) String() string { return proto.CompactTextString(m) }
 func (*Reset) ProtoMessage()    {}
 func (*Reset) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_session_fdd9d06bb5e0f754, []int{3}
+	return fileDescriptor_mysqlx_session_0bce2fe506fb34de, []int{3}
 }
 func (m *Reset) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Reset.Unmarshal(m, b)
@@ -236,7 +236,7 @@ func (m *Close) Reset()         { *m = Close{} }
 func (m *Close) String() string { return proto.CompactTextString(m) }
 func (*Close) ProtoMessage()    {}
 func (*Close) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_session_fdd9d06bb5e0f754, []int{4}
+	return fileDescriptor_mysqlx_session_0bce2fe506fb34de, []int{4}
 }
 func (m *Close) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Close.Unmarshal(m, b)
@@ -265,10 +265,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("mysqlx_session.proto", fileDescriptor_mysqlx_session_fdd9d06bb5e0f754)
+	proto.RegisterFile("mysqlx_session.proto", fileDescriptor_mysqlx_session_0bce2fe506fb34de)
 }
 
-var fileDescriptor_mysqlx_session_fdd9d06bb5e0f754 = []byte{
+var fileDescriptor_mysqlx_session_0bce2fe506fb34de = []byte{
 	// 255 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x90, 0xc1, 0x4a, 0xc3, 0x40,
 	0x10, 0x86, 0x69, 0x9b, 0x6a, 0xba, 0xd4, 0xaa, 0xa1, 0x60, 0xd4, 0x4b, 0xc9, 0xa9, 0x5e, 0x96,

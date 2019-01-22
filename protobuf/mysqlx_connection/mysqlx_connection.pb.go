@@ -6,8 +6,8 @@ package mysqlx_connection
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import Mysqlx_Datatypes "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 import _ "github.com/renthraysk/mysqlx/protobuf/mysqlx"
+import mysqlx_datatypes "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -25,7 +25,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 // a tuple of a ``name`` and a :protobuf:msg:`Mysqlx.Datatypes::Any`
 type Capability struct {
 	Name                 *string               `protobuf:"bytes,1,req,name=name" json:"name,omitempty"`
-	Value                *Mysqlx_Datatypes.Any `protobuf:"bytes,2,req,name=value" json:"value,omitempty"`
+	Value                *mysqlx_datatypes.Any `protobuf:"bytes,2,req,name=value" json:"value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
 	XXX_sizecache        int32                 `json:"-"`
@@ -35,7 +35,7 @@ func (m *Capability) Reset()         { *m = Capability{} }
 func (m *Capability) String() string { return proto.CompactTextString(m) }
 func (*Capability) ProtoMessage()    {}
 func (*Capability) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_connection_42796e46a88e4794, []int{0}
+	return fileDescriptor_mysqlx_connection_51ba02d69b16af67, []int{0}
 }
 func (m *Capability) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Capability.Unmarshal(m, b)
@@ -62,7 +62,7 @@ func (m *Capability) GetName() string {
 	return ""
 }
 
-func (m *Capability) GetValue() *Mysqlx_Datatypes.Any {
+func (m *Capability) GetValue() *mysqlx_datatypes.Any {
 	if m != nil {
 		return m.Value
 	}
@@ -81,7 +81,7 @@ func (m *Capabilities) Reset()         { *m = Capabilities{} }
 func (m *Capabilities) String() string { return proto.CompactTextString(m) }
 func (*Capabilities) ProtoMessage()    {}
 func (*Capabilities) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_connection_42796e46a88e4794, []int{1}
+	return fileDescriptor_mysqlx_connection_51ba02d69b16af67, []int{1}
 }
 func (m *Capabilities) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Capabilities.Unmarshal(m, b)
@@ -122,7 +122,7 @@ func (m *CapabilitiesGet) Reset()         { *m = CapabilitiesGet{} }
 func (m *CapabilitiesGet) String() string { return proto.CompactTextString(m) }
 func (*CapabilitiesGet) ProtoMessage()    {}
 func (*CapabilitiesGet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_connection_42796e46a88e4794, []int{2}
+	return fileDescriptor_mysqlx_connection_51ba02d69b16af67, []int{2}
 }
 func (m *CapabilitiesGet) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CapabilitiesGet.Unmarshal(m, b)
@@ -160,7 +160,7 @@ func (m *CapabilitiesSet) Reset()         { *m = CapabilitiesSet{} }
 func (m *CapabilitiesSet) String() string { return proto.CompactTextString(m) }
 func (*CapabilitiesSet) ProtoMessage()    {}
 func (*CapabilitiesSet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_connection_42796e46a88e4794, []int{3}
+	return fileDescriptor_mysqlx_connection_51ba02d69b16af67, []int{3}
 }
 func (m *CapabilitiesSet) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_CapabilitiesSet.Unmarshal(m, b)
@@ -202,7 +202,7 @@ func (m *Close) Reset()         { *m = Close{} }
 func (m *Close) String() string { return proto.CompactTextString(m) }
 func (*Close) ProtoMessage()    {}
 func (*Close) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_connection_42796e46a88e4794, []int{4}
+	return fileDescriptor_mysqlx_connection_51ba02d69b16af67, []int{4}
 }
 func (m *Close) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Close.Unmarshal(m, b)
@@ -231,10 +231,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("mysqlx_connection.proto", fileDescriptor_mysqlx_connection_42796e46a88e4794)
+	proto.RegisterFile("mysqlx_connection.proto", fileDescriptor_mysqlx_connection_51ba02d69b16af67)
 }
 
-var fileDescriptor_mysqlx_connection_42796e46a88e4794 = []byte{
+var fileDescriptor_mysqlx_connection_51ba02d69b16af67 = []byte{
 	// 250 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xcf, 0xad, 0x2c, 0x2e,
 	0xcc, 0xa9, 0x88, 0x4f, 0xce, 0xcf, 0xcb, 0x4b, 0x4d, 0x2e, 0xc9, 0xcc, 0xcf, 0xd3, 0x2b, 0x28,

@@ -69,7 +69,7 @@ func (x *Scalar_Type) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (Scalar_Type) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{0, 0}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{0, 0}
 }
 
 type Any_Type int32
@@ -108,7 +108,7 @@ func (x *Any_Type) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (Any_Type) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{3, 0}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{3, 0}
 }
 
 // a scalar
@@ -131,7 +131,7 @@ func (m *Scalar) Reset()         { *m = Scalar{} }
 func (m *Scalar) String() string { return proto.CompactTextString(m) }
 func (*Scalar) ProtoMessage()    {}
 func (*Scalar) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{0}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{0}
 }
 func (m *Scalar) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Scalar.Unmarshal(m, b)
@@ -220,7 +220,7 @@ func (m *Scalar_String) Reset()         { *m = Scalar_String{} }
 func (m *Scalar_String) String() string { return proto.CompactTextString(m) }
 func (*Scalar_String) ProtoMessage()    {}
 func (*Scalar_String) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{0, 0}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{0, 0}
 }
 func (m *Scalar_String) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Scalar_String.Unmarshal(m, b)
@@ -268,7 +268,7 @@ func (m *Scalar_Octets) Reset()         { *m = Scalar_Octets{} }
 func (m *Scalar_Octets) String() string { return proto.CompactTextString(m) }
 func (*Scalar_Octets) ProtoMessage()    {}
 func (*Scalar_Octets) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{0, 1}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{0, 1}
 }
 func (m *Scalar_Octets) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Scalar_Octets.Unmarshal(m, b)
@@ -314,7 +314,7 @@ func (m *Object) Reset()         { *m = Object{} }
 func (m *Object) String() string { return proto.CompactTextString(m) }
 func (*Object) ProtoMessage()    {}
 func (*Object) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{1}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{1}
 }
 func (m *Object) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Object.Unmarshal(m, b)
@@ -353,7 +353,7 @@ func (m *Object_ObjectField) Reset()         { *m = Object_ObjectField{} }
 func (m *Object_ObjectField) String() string { return proto.CompactTextString(m) }
 func (*Object_ObjectField) ProtoMessage()    {}
 func (*Object_ObjectField) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{1, 0}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{1, 0}
 }
 func (m *Object_ObjectField) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Object_ObjectField.Unmarshal(m, b)
@@ -399,7 +399,7 @@ func (m *Array) Reset()         { *m = Array{} }
 func (m *Array) String() string { return proto.CompactTextString(m) }
 func (*Array) ProtoMessage()    {}
 func (*Array) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{2}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{2}
 }
 func (m *Array) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Array.Unmarshal(m, b)
@@ -441,7 +441,7 @@ func (m *Any) Reset()         { *m = Any{} }
 func (m *Any) String() string { return proto.CompactTextString(m) }
 func (*Any) ProtoMessage()    {}
 func (*Any) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_datatypes_4de93084e3560170, []int{3}
+	return fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae, []int{3}
 }
 func (m *Any) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Any.Unmarshal(m, b)
@@ -502,10 +502,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("mysqlx_datatypes.proto", fileDescriptor_mysqlx_datatypes_4de93084e3560170)
+	proto.RegisterFile("mysqlx_datatypes.proto", fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae)
 }
 
-var fileDescriptor_mysqlx_datatypes_4de93084e3560170 = []byte{
+var fileDescriptor_mysqlx_datatypes_e61d4d3b612eb6ae = []byte{
 	// 585 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x94, 0xdd, 0x6e, 0xd3, 0x4c,
 	0x10, 0x86, 0xb5, 0xf1, 0x5f, 0x32, 0xce, 0x57, 0x59, 0xab, 0xaf, 0xd4, 0x8d, 0x40, 0x98, 0xa8,

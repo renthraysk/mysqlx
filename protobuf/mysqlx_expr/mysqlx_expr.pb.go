@@ -22,7 +22,7 @@ The structures can be used to:
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import Mysqlx_Datatypes "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
+import mysqlx_datatypes "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -86,7 +86,7 @@ func (x *Expr_Type) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (Expr_Type) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{0, 0}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{0, 0}
 }
 
 type DocumentPathItem_Type int32
@@ -131,7 +131,7 @@ func (x *DocumentPathItem_Type) UnmarshalJSON(data []byte) error {
 	return nil
 }
 func (DocumentPathItem_Type) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{2, 0}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{2, 0}
 }
 
 // Expressions
@@ -155,7 +155,7 @@ type Expr struct {
 	Type                 *Expr_Type               `protobuf:"varint,1,req,name=type,enum=Mysqlx.Expr.Expr_Type" json:"type,omitempty"`
 	Identifier           *ColumnIdentifier        `protobuf:"bytes,2,opt,name=identifier" json:"identifier,omitempty"`
 	Variable             *string                  `protobuf:"bytes,3,opt,name=variable" json:"variable,omitempty"`
-	Literal              *Mysqlx_Datatypes.Scalar `protobuf:"bytes,4,opt,name=literal" json:"literal,omitempty"`
+	Literal              *mysqlx_datatypes.Scalar `protobuf:"bytes,4,opt,name=literal" json:"literal,omitempty"`
 	FunctionCall         *FunctionCall            `protobuf:"bytes,5,opt,name=function_call,json=functionCall" json:"function_call,omitempty"`
 	Operator             *Operator                `protobuf:"bytes,6,opt,name=operator" json:"operator,omitempty"`
 	Position             *uint32                  `protobuf:"varint,7,opt,name=position" json:"position,omitempty"`
@@ -170,7 +170,7 @@ func (m *Expr) Reset()         { *m = Expr{} }
 func (m *Expr) String() string { return proto.CompactTextString(m) }
 func (*Expr) ProtoMessage()    {}
 func (*Expr) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{0}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{0}
 }
 func (m *Expr) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Expr.Unmarshal(m, b)
@@ -211,7 +211,7 @@ func (m *Expr) GetVariable() string {
 	return ""
 }
 
-func (m *Expr) GetLiteral() *Mysqlx_Datatypes.Scalar {
+func (m *Expr) GetLiteral() *mysqlx_datatypes.Scalar {
 	if m != nil {
 		return m.Literal
 	}
@@ -270,7 +270,7 @@ func (m *Identifier) Reset()         { *m = Identifier{} }
 func (m *Identifier) String() string { return proto.CompactTextString(m) }
 func (*Identifier) ProtoMessage()    {}
 func (*Identifier) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{1}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{1}
 }
 func (m *Identifier) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Identifier.Unmarshal(m, b)
@@ -325,7 +325,7 @@ func (m *DocumentPathItem) Reset()         { *m = DocumentPathItem{} }
 func (m *DocumentPathItem) String() string { return proto.CompactTextString(m) }
 func (*DocumentPathItem) ProtoMessage()    {}
 func (*DocumentPathItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{2}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{2}
 }
 func (m *DocumentPathItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DocumentPathItem.Unmarshal(m, b)
@@ -396,7 +396,7 @@ func (m *ColumnIdentifier) Reset()         { *m = ColumnIdentifier{} }
 func (m *ColumnIdentifier) String() string { return proto.CompactTextString(m) }
 func (*ColumnIdentifier) ProtoMessage()    {}
 func (*ColumnIdentifier) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{3}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{3}
 }
 func (m *ColumnIdentifier) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ColumnIdentifier.Unmarshal(m, b)
@@ -460,7 +460,7 @@ func (m *FunctionCall) Reset()         { *m = FunctionCall{} }
 func (m *FunctionCall) String() string { return proto.CompactTextString(m) }
 func (*FunctionCall) ProtoMessage()    {}
 func (*FunctionCall) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{4}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{4}
 }
 func (m *FunctionCall) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_FunctionCall.Unmarshal(m, b)
@@ -597,7 +597,7 @@ func (m *Operator) Reset()         { *m = Operator{} }
 func (m *Operator) String() string { return proto.CompactTextString(m) }
 func (*Operator) ProtoMessage()    {}
 func (*Operator) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{5}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{5}
 }
 func (m *Operator) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Operator.Unmarshal(m, b)
@@ -643,7 +643,7 @@ func (m *Object) Reset()         { *m = Object{} }
 func (m *Object) String() string { return proto.CompactTextString(m) }
 func (*Object) ProtoMessage()    {}
 func (*Object) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{6}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{6}
 }
 func (m *Object) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Object.Unmarshal(m, b)
@@ -682,7 +682,7 @@ func (m *Object_ObjectField) Reset()         { *m = Object_ObjectField{} }
 func (m *Object_ObjectField) String() string { return proto.CompactTextString(m) }
 func (*Object_ObjectField) ProtoMessage()    {}
 func (*Object_ObjectField) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{6, 0}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{6, 0}
 }
 func (m *Object_ObjectField) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Object_ObjectField.Unmarshal(m, b)
@@ -728,7 +728,7 @@ func (m *Array) Reset()         { *m = Array{} }
 func (m *Array) String() string { return proto.CompactTextString(m) }
 func (*Array) ProtoMessage()    {}
 func (*Array) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e, []int{7}
+	return fileDescriptor_mysqlx_expr_85001555f1eb97ed, []int{7}
 }
 func (m *Array) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Array.Unmarshal(m, b)
@@ -769,9 +769,9 @@ func init() {
 	proto.RegisterEnum("Mysqlx.Expr.DocumentPathItem_Type", DocumentPathItem_Type_name, DocumentPathItem_Type_value)
 }
 
-func init() { proto.RegisterFile("mysqlx_expr.proto", fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e) }
+func init() { proto.RegisterFile("mysqlx_expr.proto", fileDescriptor_mysqlx_expr_85001555f1eb97ed) }
 
-var fileDescriptor_mysqlx_expr_f6d7e1c148b6c33e = []byte{
+var fileDescriptor_mysqlx_expr_85001555f1eb97ed = []byte{
 	// 714 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0x5b, 0x6e, 0xda, 0x40,
 	0x14, 0x95, 0xc1, 0xe6, 0x71, 0x81, 0xc6, 0x99, 0xa4, 0x89, 0x13, 0x29, 0x0a, 0xf2, 0x4f, 0x51,

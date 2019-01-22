@@ -11,7 +11,7 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 import _ "github.com/renthraysk/mysqlx/protobuf/mysqlx"
-import Mysqlx_Datatypes "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
+import mysqlx_datatypes "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -45,7 +45,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type StmtExecute struct {
 	Namespace            *string                 `protobuf:"bytes,3,opt,name=namespace,def=sql" json:"namespace,omitempty"`
 	Stmt                 []byte                  `protobuf:"bytes,1,req,name=stmt" json:"stmt,omitempty"`
-	Args                 []*Mysqlx_Datatypes.Any `protobuf:"bytes,2,rep,name=args" json:"args,omitempty"`
+	Args                 []*mysqlx_datatypes.Any `protobuf:"bytes,2,rep,name=args" json:"args,omitempty"`
 	CompactMetadata      *bool                   `protobuf:"varint,4,opt,name=compact_metadata,json=compactMetadata,def=0" json:"compact_metadata,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                `json:"-"`
 	XXX_unrecognized     []byte                  `json:"-"`
@@ -56,7 +56,7 @@ func (m *StmtExecute) Reset()         { *m = StmtExecute{} }
 func (m *StmtExecute) String() string { return proto.CompactTextString(m) }
 func (*StmtExecute) ProtoMessage()    {}
 func (*StmtExecute) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_sql_e6a7224512dfde0f, []int{0}
+	return fileDescriptor_mysqlx_sql_4485290388f5f08f, []int{0}
 }
 func (m *StmtExecute) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StmtExecute.Unmarshal(m, b)
@@ -93,7 +93,7 @@ func (m *StmtExecute) GetStmt() []byte {
 	return nil
 }
 
-func (m *StmtExecute) GetArgs() []*Mysqlx_Datatypes.Any {
+func (m *StmtExecute) GetArgs() []*mysqlx_datatypes.Any {
 	if m != nil {
 		return m.Args
 	}
@@ -118,7 +118,7 @@ func (m *StmtExecuteOk) Reset()         { *m = StmtExecuteOk{} }
 func (m *StmtExecuteOk) String() string { return proto.CompactTextString(m) }
 func (*StmtExecuteOk) ProtoMessage()    {}
 func (*StmtExecuteOk) Descriptor() ([]byte, []int) {
-	return fileDescriptor_mysqlx_sql_e6a7224512dfde0f, []int{1}
+	return fileDescriptor_mysqlx_sql_4485290388f5f08f, []int{1}
 }
 func (m *StmtExecuteOk) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_StmtExecuteOk.Unmarshal(m, b)
@@ -143,9 +143,9 @@ func init() {
 	proto.RegisterType((*StmtExecuteOk)(nil), "Mysqlx.Sql.StmtExecuteOk")
 }
 
-func init() { proto.RegisterFile("mysqlx_sql.proto", fileDescriptor_mysqlx_sql_e6a7224512dfde0f) }
+func init() { proto.RegisterFile("mysqlx_sql.proto", fileDescriptor_mysqlx_sql_4485290388f5f08f) }
 
-var fileDescriptor_mysqlx_sql_e6a7224512dfde0f = []byte{
+var fileDescriptor_mysqlx_sql_4485290388f5f08f = []byte{
 	// 238 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0xc8, 0xad, 0x2c, 0x2e,
 	0xcc, 0xa9, 0x88, 0x2f, 0x2e, 0xcc, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0xf2, 0x05,
