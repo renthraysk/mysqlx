@@ -117,16 +117,16 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 				case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
 				case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
 				case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
-					r.lastInsertID, r.hasLastInsertID = ScalarUint(s.Value)
+					r.lastInsertID, r.hasLastInsertID = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
-					r.rowsAffected, r.hasRowsAffected = ScalarUint(s.Value)
+					r.rowsAffected, r.hasRowsAffected = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
-					r.rowsFound, r.hasRowsFound = ScalarUint(s.Value)
+					r.rowsFound, r.hasRowsFound = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
-					r.rowsMatched, r.hasRowsMatched = ScalarUint(s.Value)
+					r.rowsMatched, r.hasRowsMatched = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
 				case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
@@ -134,7 +134,7 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 				case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
 
 				case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
-					c.clientID, c.hasClientID = ScalarUint(s.Value)
+					c.clientID, c.hasClientID = ScalarUint(s.Value[0])
 				}
 			}
 		default:
