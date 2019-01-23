@@ -49,7 +49,7 @@ func New(network, addr string, options ...Option) (*Connector, error) {
 		network:         network,
 		addr:            addr,
 		authentication:  mysql41.New(),
-		stmtPreparer:    noStmtPreparer,
+		stmtPreparer:    actualStmtPreparer,
 		sessionResetter: NoSessionResetter,
 		bufferSize:      minBufferSize,
 	}
