@@ -53,7 +53,7 @@ func (s *preparedStmt) QueryContext(ctx context.Context, args []driver.NamedValu
 	if err != nil {
 		return nil, err
 	}
-	return s.c.queryMsg(context.Background(), e)
+	return s.c.queryMsg(ctx, e)
 }
 
 func actualStmtPreparer(ctx context.Context, c *conn, query string) (driver.Stmt, error) {

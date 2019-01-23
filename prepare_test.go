@@ -14,14 +14,9 @@ func TestPrepare(t *testing.T) {
 	db := sql.OpenDB(connector)
 	defer db.Close()
 	stmt, err := db.Prepare("SELECT ?")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer stmt.Close()
+	assert.NoError(t, err)
 
 	values := []interface{}{
-		false,
-		true,
 		nil,
 		0,
 		1,
@@ -44,4 +39,6 @@ func TestPrepare(t *testing.T) {
 			assert.NoError(t, rows.Close())
 		})
 	}
+
+	assert.NoError(t, stmt.Close())
 }
