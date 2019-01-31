@@ -3,19 +3,26 @@ package mysqlx
 import (
 	"context"
 	"database/sql/driver"
-
-	"github.com/pkg/errors"
+	"encoding/binary"
+	"hash/fnv"
 
 	"github.com/renthraysk/mysqlx/msg"
 )
 
 type preparedStmt struct {
-	c  *conn
-	id uint32
+	c    *conn
+	stmt string
+	id   uint32
 }
 
 func (s *preparedStmt) Close() error {
-	return nil
+	if s.c == nil {
+		return nil
+	}
+	m := msg.NewDeallocate(s.c.buf[:0], s.id)
+	_, err := s.c.execMsg(context.Background(), m)
+	s.c = nil
+	return err
 }
 
 func (s *preparedStmt) NumInput() int {
@@ -49,20 +56,28 @@ func (s *preparedStmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func (s *preparedStmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	e, err := msg.NewExecuteNamedArgs(s.c.buf[:0], s.id, args)
+	q, err := msg.NewExecuteNamedArgs(s.c.buf[:0], s.id, args)
 	if err != nil {
 		return nil, err
 	}
-	return s.c.queryMsg(ctx, e)
+	return s.c.queryMsg(ctx, q)
 }
 
-func actualStmtPreparer(ctx context.Context, c *conn, query string) (driver.Stmt, error) {
-	var id uint32
+func actualStmtPreparer(ctx context.Context, c *conn, stmt string) (driver.Stmt, error) {
+	// Attempt to assign the same id for the same stmt
+	// @TODO Handle hash collisions.
 
-	_, err := c.execMsg(ctx, msg.NewPrepare(c.buf[:0], id, query))
-	if err != nil {
-		return nil, errors.Wrap(err, "prepare failed")
+	h := fnv.New32a()
+	h.Write([]byte(stmt))
+	id := binary.BigEndian.Uint32(h.Sum(c.buf[:0]))
+
+	if _, err := c.execMsg(ctx, msg.NewPrepare(c.buf[:0], id, stmt)); err != nil {
+		return nil, err
 	}
 
-	return &preparedStmt{c, id}, nil
+	return &preparedStmt{
+		c:    c,
+		id:   id,
+		stmt: stmt,
+	}, nil
 }

@@ -207,6 +207,7 @@ func TestBeginTx(t *testing.T) {
 	}
 }
 
+/*
 func TestQueryTimeout(t *testing.T) {
 
 	db := NewDB(t)
@@ -226,3 +227,4 @@ func TestQueryTimeout(t *testing.T) {
 		assert.NoError(t, rows.Scan(&val))
 	}
 }
+*/
