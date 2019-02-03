@@ -147,8 +147,39 @@ func (r *rows) HasNextResultSet() bool {
 }
 
 func (r *rows) NextResultSet() error {
-	if r.state == queryFetchDoneMoreResultSets || r.state == queryFetchDoneMoreOutParams {
-		return r.readColumns(context.Background())
+
+	ctx := context.Background()
+
+	switch r.state {
+	case queryFetchDoneMoreResultSets, queryFetchDoneMoreOutParams:
+		return r.readColumns(ctx)
+
+	case queryFetchedFirstRow:
+		r.state = queryFetchRows
+		r.firstRow = nil
+		fallthrough
+	case queryFetchRows:
+		for {
+			t, _, err := r.conn.readMessage(ctx)
+			if err != nil {
+				return err
+			}
+			switch t {
+			case mysqlx.ServerMessages_RESULTSET_ROW:
+
+			case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
+				r.state = queryFetchDone
+				return io.EOF
+
+			case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_RESULTSETS:
+				r.state = queryFetchDoneMoreResultSets
+				return r.readColumns(ctx)
+
+			case mysqlx.ServerMessages_RESULTSET_FETCH_DONE_MORE_OUT_PARAMS:
+				r.state = queryFetchDoneMoreOutParams
+				return r.readColumns(ctx)
+			}
+		}
 	}
 	return io.EOF
 }
