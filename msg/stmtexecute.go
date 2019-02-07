@@ -253,7 +253,7 @@ func StmtNamedValues(buf []byte, stmt string, args []driver.NamedValue) (Msg, er
 			return nil, errors.New("mysql does not support the use of named parameters")
 		}
 		if err := s.appendArgValue(arg.Value); err != nil {
-			return nil, errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
+			return nil, errors.Wrapf(err, "unable to serialize argument #%d", arg.Ordinal)
 		}
 	}
 	return s, nil
