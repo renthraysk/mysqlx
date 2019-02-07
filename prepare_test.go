@@ -1,6 +1,7 @@
 package mysqlx
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"testing"
@@ -9,12 +10,29 @@ import (
 )
 
 func TestPrepare(t *testing.T) {
+	const (
+		SQLTEXT = "SELECT ?"
+	)
+	ctx := context.Background()
+
 	connector := NewConnector(t)
 
 	db := sql.OpenDB(connector)
 	defer db.Close()
-	stmt, err := db.Prepare("SELECT ?")
+
+	// Grab single connection
+	cnn, err := db.Conn(ctx)
 	assert.NoError(t, err)
+
+	stmt, err := cnn.PrepareContext(ctx, SQLTEXT)
+	assert.NoError(t, err)
+
+	// Make sure our SQL didn't get mangled...
+	rows, err := cnn.QueryContext(ctx, "SELECT 1 from performance_schema.prepared_statements_instances WHERE SQL_TEXT = ?", SQLTEXT)
+	assert.NoError(t, err)
+	assert.True(t, rows.Next())
+	assert.False(t, rows.Next())
+	assert.NoError(t, rows.Close())
 
 	values := []interface{}{
 		nil,
@@ -41,4 +59,6 @@ func TestPrepare(t *testing.T) {
 	}
 
 	assert.NoError(t, stmt.Close())
+	assert.NoError(t, cnn.Close())
+	assert.NoError(t, db.Close())
 }
