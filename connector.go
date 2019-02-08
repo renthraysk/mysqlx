@@ -25,7 +25,6 @@ type Connector struct {
 	username        string
 	password        string
 	authentication  authentication.Starter
-	stmtPreparer    stmtPreparer
 	sessionResetter SessionResetter
 
 	bufferSize int
@@ -49,7 +48,6 @@ func New(network, addr string, options ...Option) (*Connector, error) {
 		network:         network,
 		addr:            addr,
 		authentication:  mysql41.New(),
-		stmtPreparer:    actualStmtPreparer,
 		sessionResetter: NoSessionResetter,
 		bufferSize:      minBufferSize,
 	}

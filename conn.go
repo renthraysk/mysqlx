@@ -29,6 +29,8 @@ type conn struct {
 
 	hasClientID bool
 	clientID    uint64
+
+	preparedStmts map[string]uint32
 }
 
 func (c *conn) replaceBuffer() {
@@ -172,12 +174,28 @@ func (c *conn) QueryContext(ctx context.Context, stmt string, args []driver.Name
 }
 
 func (c *conn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
-	return c.connector.stmtPreparer(ctx, c, query)
+	if c.preparedStmts == nil {
+		c.preparedStmts = make(map[string]uint32)
+	}
+	id, ok := c.preparedStmts[query]
+	if !ok {
+		id = uint32(len(c.preparedStmts) + 1)
+		c.preparedStmts[query] = id
+	}
+
+	if _, err := c.execMsg(ctx, msg.NewPrepare(c.buf[:0], id, query)); err != nil {
+		return nil, err
+	}
+
+	return &stmt{
+		c:  c,
+		id: id,
+	}, nil
 }
 
 // Prepare driver.Conn interface forces this deprecated implementation
 func (c *conn) Prepare(query string) (driver.Stmt, error) {
-	return c.connector.stmtPreparer(context.Background(), c, query)
+	return c.PrepareContext(context.Background(), query)
 }
 
 func (c *conn) Close() error {
