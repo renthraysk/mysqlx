@@ -9,32 +9,35 @@ type String struct {
 	Collation collation.Collation
 }
 
-func (s *String) AppendArg(se *StmtExecute) error {
-	se.AppendArgString(s.Value, s.Collation)
+func (s *String) AppendArg(a Args) error {
+	a.AppendArgString(s.Value, s.Collation)
 	return nil
 }
 
 type Null struct{}
 
-func (n Null) AppendArg(s *StmtExecute) error {
-	s.AppendArgNull()
+func (n Null) AppendArg(a Args) error {
+	a.AppendArgNull()
 	return nil
 }
 
 type Geometry []byte
 
-func (g Geometry) AppendArg(s *StmtExecute) error {
-	return s.AppendArgGeometry(g)
+func (g Geometry) AppendArg(a Args) error {
+	a.AppendArgBytes(g, ContentTypeGeometry)
+	return nil
 }
 
 type JSON []byte
 
-func (j JSON) AppendArg(s *StmtExecute) error {
-	return s.AppendArgJSON(j)
+func (j JSON) AppendArg(a Args) error {
+	a.AppendArgBytes(j, ContentTypeJSON)
+	return nil
 }
 
 type XML []byte
 
-func (x XML) AppendArg(s *StmtExecute) error {
-	return s.AppendArgXML(x)
+func (x XML) AppendArg(a Args) error {
+	a.AppendArgBytes(x, ContentTypeXML)
+	return nil
 }

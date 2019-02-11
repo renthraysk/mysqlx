@@ -3,11 +3,7 @@ package msg
 import (
 	"database/sql/driver"
 	"encoding/binary"
-	"fmt"
 	"io"
-	"reflect"
-	"strconv"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -17,17 +13,17 @@ import (
 	"github.com/renthraysk/mysqlx/slice"
 )
 
-const (
-	tagPrepareStmtId = 1
-	tagPrepareStmt   = 2
-)
-
-const (
-	tagPrepareOneOfType    = 1
-	tagPrepareOneOfExecute = 6
-)
-
 func NewPrepare(buf []byte, id uint32, stmt string) Msg {
+
+	const (
+		tagPrepareStmtId = 1
+		tagPrepareStmt   = 2
+	)
+
+	const (
+		tagPrepareOneOfType    = 1
+		tagPrepareOneOfExecute = 6
+	)
 
 	n := len(stmt)
 	n1 := 1 + SizeUvarint(uint(n)) + n
@@ -97,34 +93,6 @@ func (s *Execute) AppendArgBytes(bytes []byte, contentType ContentType) {
 	*s = appendAnyBytes(*s, tagExecuteArgs, bytes, contentType)
 }
 
-func (s *Execute) AppendArgGeometry(geom []byte) error {
-	*s = appendAnyBytes(*s, tagExecuteArgs, geom, ContentTypeGeometry)
-	return nil
-}
-
-func (s *Execute) AppendArgJSON(json []byte) error {
-	*s = appendAnyBytes(*s, tagExecuteArgs, json, ContentTypeJSON)
-	return nil
-}
-
-func (s *Execute) AppendArgXML(xml []byte) error {
-	*s = appendAnyBytes(*s, tagExecuteArgs, xml, ContentTypeXML)
-	return nil
-}
-
-// AppendArgTime appends a time parameter
-func (s *Execute) AppendArgTime(t time.Time) {
-	const fmt = "2006-01-02 15:04:05.999999999"
-	var b [len(fmt) + 16]byte
-
-	if t.IsZero() {
-		s.AppendArgBytes(zeroTime, ContentTypePlain)
-		return
-	}
-
-	s.AppendArgBytes(t.AppendFormat(b[:0], fmt), ContentTypePlain)
-}
-
 // AppendArgString appends a string parameter
 func (s *Execute) AppendArgString(str string, collation collation.Collation) {
 	*s = appendAnyString(*s, tagExecuteArgs, str, collation)
@@ -145,94 +113,15 @@ func (s *Execute) AppendArgBool(b bool) {
 	*s = appendAnyBool(*s, tagExecuteArgs, b)
 }
 
-func (s *Execute) AppendArgDuration(d time.Duration) error {
-	var buf [1 + 20 + 1 + 2 + 1 + 2]byte
-
-	b := buf[:0]
-	if d < 0 {
-		d = -d
-		b = buf[:1]
-		b[0] = '-'
-	}
-	if d > 838*time.Hour+59*time.Minute+59*time.Second {
-		return errors.New("time.Duration outside TIME range [-838:59:59, 838:59:59]")
-	}
-
-	b = strconv.AppendUint(b, uint64(d/time.Hour), 10)
-	i := 2 * (uint(d/time.Minute) % 60)
-	j := 2 * (uint(d/time.Second) % 60)
-	b = append(b, ':', smallsString[i], smallsString[i+1],
-		':', smallsString[j], smallsString[j+1])
-	s.AppendArgBytes(b, ContentTypePlain)
-	return nil
-}
-
 // AppendArgNull appends a NULL parameter
 func (s *Execute) AppendArgNull() {
 	*s = appendAnyNull(*s, tagExecuteArgs)
 }
 
-func (s *Execute) appendArgValue(value interface{}) error {
-	if value == nil {
-		s.AppendArgNull()
-		return nil
-	}
-	switch v := value.(type) {
-	case string:
-		s.AppendArgString(v, 0)
-	case []byte:
-		s.AppendArgBytes(v, ContentTypePlain)
-	case uint:
-		s.AppendArgUint(uint64(v))
-	case uint8:
-		s.AppendArgUint(uint64(v))
-	case uint16:
-		s.AppendArgUint(uint64(v))
-	case uint32:
-		s.AppendArgUint(uint64(v))
-	case uint64:
-		s.AppendArgUint(v)
-	case int:
-		s.AppendArgInt(int64(v))
-	case int8:
-		s.AppendArgInt(int64(v))
-	case int16:
-		s.AppendArgInt(int64(v))
-	case int32:
-		s.AppendArgInt(int64(v))
-	case int64:
-		s.AppendArgInt(v)
-	case bool:
-		s.AppendArgBool(v)
-	case float32:
-		s.AppendArgFloat32(v)
-	case float64:
-		s.AppendArgFloat64(v)
-	case time.Time:
-		s.AppendArgTime(v)
-	case time.Duration:
-		s.AppendArgDuration(v)
-	default:
-
-		rv := reflect.ValueOf(value)
-		switch rv.Kind() {
-		case reflect.Ptr:
-			if rv.IsNil() {
-				s.AppendArgNull()
-				return nil
-			}
-			return s.appendArgValue(rv.Elem().Interface())
-		default:
-			return fmt.Errorf("unsupported type %T, a %s", value, rv.Kind())
-		}
-	}
-	return nil
-}
-
 func NewExecuteArgs(buf []byte, id uint32, args []driver.Value) (Msg, error) {
 	e := NewExecute(buf, id)
 	for i, arg := range args {
-		if err := e.appendArgValue(arg); err != nil {
+		if err := appendArgValue(&e, arg); err != nil {
 			return nil, errors.Wrapf(err, "unable to serialize argument %d", i)
 		}
 	}
@@ -245,7 +134,7 @@ func NewExecuteNamedArgs(buf []byte, id uint32, args []driver.NamedValue) (Msg, 
 		if len(arg.Name) > 0 {
 			return nil, errors.New("mysql does not support the use of named parameters")
 		}
-		if err := e.appendArgValue(arg.Value); err != nil {
+		if err := appendArgValue(&e, arg.Value); err != nil {
 			return nil, errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
 		}
 	}
