@@ -1,6 +1,9 @@
 package mysqlx
 
-import "github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
+import (
+	"github.com/renthraysk/mysqlx/collation"
+	"github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
+)
 
 // ScalarUint returns the uint64 value of a pb Scalar
 func ScalarUint(s *mysqlx_datatypes.Scalar) (uint64, bool) {
@@ -11,12 +14,16 @@ func ScalarUint(s *mysqlx_datatypes.Scalar) (uint64, bool) {
 }
 
 // ScalarString returns the string value of a pb Scalar
-func ScalarString(s *mysqlx_datatypes.Scalar) (string, bool) {
+func ScalarString(s *mysqlx_datatypes.Scalar) (string, collation.Collation, bool) {
 	if s == nil || s.Type == nil || *s.Type != mysqlx_datatypes.Scalar_V_STRING || s.VString == nil {
-		return "", false
+		return "", 0, false
 	}
-	//@TODO Collation?
-	return string(s.VString.Value), true
+	var col collation.Collation
+
+	if s.VString.Collation != nil {
+		col = collation.Collation(*s.VString.Collation)
+	}
+	return string(s.VString.Value), col, true
 }
 
 func ScalarValue(s *mysqlx_datatypes.Scalar) (interface{}, bool) {
