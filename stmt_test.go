@@ -38,10 +38,15 @@ func TestPrepare(t *testing.T) {
 		nil,
 		0,
 		1,
-		1.5,
+		float64(1.5),
+		float32(1.34),
 		42,
 		"abc",
 		[]byte{'x', 'y', 'z'},
+		JSON([]byte("{}")),
+		XML([]byte("<foo />")),
+		true,
+		false,
 	}
 
 	for _, v := range values {
@@ -53,7 +58,17 @@ func TestPrepare(t *testing.T) {
 			assert.NoError(t, err)
 			assert.True(t, rows.Next())
 			assert.NoError(t, rows.Scan(&r))
-			assert.EqualValues(t, v, r)
+			switch vv := v.(type) {
+			case bool:
+				if vv {
+					// nonzero is true
+					assert.False(t, assert.ObjectsAreEqual(0, r))
+				} else {
+					assert.EqualValues(t, 0, r)
+				}
+			default:
+				assert.EqualValues(t, v, r)
+			}
 			assert.NoError(t, rows.Close())
 		})
 	}

@@ -24,7 +24,6 @@ import (
 	"github.com/renthraysk/mysqlx/slice"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -82,21 +81,6 @@ func (s *StmtExecute) AppendArgBytes(bytes []byte, contentType ContentType) {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, bytes, contentType)
 }
 
-func (s *StmtExecute) AppendArgGeometry(geom []byte) error {
-	*s = appendAnyBytes(*s, tagStmtExecuteArgs, geom, ContentTypeGeometry)
-	return nil
-}
-
-func (s *StmtExecute) AppendArgJSON(json []byte) error {
-	*s = appendAnyBytes(*s, tagStmtExecuteArgs, json, ContentTypeJSON)
-	return nil
-}
-
-func (s *StmtExecute) AppendArgXML(xml []byte) error {
-	*s = appendAnyBytes(*s, tagStmtExecuteArgs, xml, ContentTypeXML)
-	return nil
-}
-
 // AppendArgString appends a string parameter
 func (s *StmtExecute) AppendArgString(str string, collation collation.Collation) {
 	*s = appendAnyString(*s, tagStmtExecuteArgs, str, collation)
@@ -125,10 +109,8 @@ func (s *StmtExecute) AppendArgNull() {
 // StmtValues serialises a SQL statement and arguments into a Msg for sending to MySQL.
 func StmtValues(buf []byte, stmt string, args []driver.Value) (Msg, error) {
 	s := NewStmtExecute(buf, stmt)
-	for i, arg := range args {
-		if err := appendArgValue(&s, arg); err != nil {
-			return nil, errors.Wrapf(err, "unable to serialize argument %d", i)
-		}
+	if err := appendArgValues(&s, args); err != nil {
+		return nil, err
 	}
 	return s, nil
 }
@@ -137,13 +119,8 @@ func StmtValues(buf []byte, stmt string, args []driver.Value) (Msg, error) {
 // Named arguments are not supported by MySQL, and will result in a error.
 func StmtNamedValues(buf []byte, stmt string, args []driver.NamedValue) (Msg, error) {
 	s := NewStmtExecute(buf, stmt)
-	for _, arg := range args {
-		if len(arg.Name) > 0 {
-			return nil, errors.New("mysql does not support the use of named parameters")
-		}
-		if err := appendArgValue(&s, arg.Value); err != nil {
-			return nil, errors.Wrapf(err, "unable to serialize argument #%d", arg.Ordinal)
-		}
+	if err := appendArgNamedValues(&s, args); err != nil {
+		return nil, err
 	}
 	return s, nil
 }

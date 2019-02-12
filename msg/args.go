@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -127,6 +128,27 @@ func appendArgValue(s Args, value interface{}) error {
 			return appendArgValue(s, rv.Elem().Interface())
 		default:
 			return fmt.Errorf("unsupported type %T, a %s", value, rv.Kind())
+		}
+	}
+	return nil
+}
+
+func appendArgValues(a Args, values []driver.Value) error {
+	for i, arg := range values {
+		if err := appendArgValue(a, arg); err != nil {
+			return errors.Wrapf(err, "unable to serialize argument %d", i)
+		}
+	}
+	return nil
+}
+
+func appendArgNamedValues(a Args, values []driver.NamedValue) error {
+	for _, arg := range values {
+		if len(arg.Name) > 0 {
+			return errors.New("mysql does not support the use of named parameters")
+		}
+		if err := appendArgValue(a, arg.Value); err != nil {
+			return errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
 		}
 	}
 	return nil

@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_prepare"
@@ -120,23 +119,16 @@ func (s *Execute) AppendArgNull() {
 
 func NewExecuteArgs(buf []byte, id uint32, args []driver.Value) (Msg, error) {
 	e := NewExecute(buf, id)
-	for i, arg := range args {
-		if err := appendArgValue(&e, arg); err != nil {
-			return nil, errors.Wrapf(err, "unable to serialize argument %d", i)
-		}
+	if err := appendArgValues(&e, args); err != nil {
+		return nil, err
 	}
 	return e, nil
 }
 
 func NewExecuteNamedArgs(buf []byte, id uint32, args []driver.NamedValue) (Msg, error) {
 	e := NewExecute(buf, id)
-	for _, arg := range args {
-		if len(arg.Name) > 0 {
-			return nil, errors.New("mysql does not support the use of named parameters")
-		}
-		if err := appendArgValue(&e, arg.Value); err != nil {
-			return nil, errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
-		}
+	if err := appendArgNamedValues(&e, args); err != nil {
+		return nil, err
 	}
 	return e, nil
 }
