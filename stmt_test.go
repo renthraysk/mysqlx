@@ -50,7 +50,7 @@ func TestPrepare(t *testing.T) {
 	}
 
 	for _, v := range values {
-		t.Run(fmt.Sprintf("test.%v", v), func(t *testing.T) {
+		t.Run(fmt.Sprintf("test.%T(%v)", v, v), func(t *testing.T) {
 
 			var r interface{}
 
