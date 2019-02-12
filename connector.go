@@ -4,10 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql/driver"
+
 	"net"
 
 	"github.com/renthraysk/mysqlx/authentication"
 	"github.com/renthraysk/mysqlx/authentication/mysql41"
+	"github.com/renthraysk/mysqlx/msg"
 
 	"github.com/pkg/errors"
 )
@@ -128,7 +130,17 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	}
 
 	if _, ok := netConn.(*net.TCPConn); ok && cnn.tlsConfig != nil {
-		conn.enableTLS(ctx, cnn.tlsConfig)
+		s := msg.NewCapabilitySetTLSEnable(conn.buf[:0])
+		if _, err := conn.execMsg(ctx, s); err != nil {
+			netConn.Close()
+			return nil, errors.Wrap(err, "failed to set TLS capability")
+		}
+		tlsConn := tls.Client(netConn, cnn.tlsConfig)
+		if err := tlsConn.Handshake(); err != nil {
+			tlsConn.Close()
+			return nil, errors.Wrap(err, "failed TLS handshake")
+		}
+		conn.netConn = tlsConn
 	}
 
 	if err := conn.authenticate(ctx); err != nil {
