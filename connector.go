@@ -127,14 +127,8 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 		buf:       make([]byte, cnn.bufferSize),
 	}
 
-	if tc, ok := netConn.(*net.TCPConn); ok {
-		if err := tc.SetKeepAlive(true); err != nil {
-			netConn.Close()
-			return nil, errors.Wrap(err, "failed to set keep alive")
-		}
-		if cnn.tlsConfig != nil {
-			conn.enableTLS(ctx, cnn.tlsConfig)
-		}
+	if _, ok := netConn.(*net.TCPConn); ok && cnn.tlsConfig != nil {
+		conn.enableTLS(ctx, cnn.tlsConfig)
 	}
 
 	if err := conn.authenticate(ctx); err != nil {
