@@ -2,7 +2,6 @@ package msg
 
 import (
 	"database/sql/driver"
-	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -120,7 +119,7 @@ derefLoop:
 			goto derefLoop
 
 		default:
-			return fmt.Errorf("unsupported type %T, a %s", value, rv.Kind())
+			return errors.Errorf("unsupported type %T, a %s", value, rv.Kind())
 		}
 	}
 	return nil
