@@ -63,7 +63,10 @@ func (c *conn) send(ctx context.Context, m msg.Msg) error {
 	if err := c.netConn.SetDeadline(deadline); err != nil {
 		return errors.Wrap(err, "unable to set deadline")
 	}
-	_, err := m.WriteTo(c.netConn)
+	n, err := m.WriteTo(c.netConn)
+	if err != nil && n == 0 {
+		return driver.ErrBadConn
+	}
 	return err
 }
 
