@@ -122,15 +122,25 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 				case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
 				case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
 				case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
+
 					r.lastInsertID, r.hasLastInsertID = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
+					if len(s.Value) != 1 {
+						return nil, errors.New("Unexpected number of rows affected values")
+					}
 					r.rowsAffected, r.hasRowsAffected = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
+					if len(s.Value) != 1 {
+						return nil, errors.New("Unexpected number of rows found values")
+					}
 					r.rowsFound, r.hasRowsFound = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
+					if len(s.Value) != 1 {
+						return nil, errors.New("Unexpected number of rows matched values")
+					}
 					r.rowsMatched, r.hasRowsMatched = ScalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
