@@ -257,7 +257,7 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = math.Float32frombits(binary.LittleEndian.Uint32(b[i:j]))
 
 			case mysqlx_resultset.ColumnMetaData_DATETIME:
-				if column.IsDateTimeDate() {
+				if column.hasContentType && mysqlx_resultset.ContentType_DATETIME(column.contentType) == mysqlx_resultset.ContentType_DATETIME_DATE {
 					var d Date
 
 					if err := d.Unmarshal(b[i:j]); err != nil {
