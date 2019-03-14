@@ -75,7 +75,7 @@ func (r *rows) readColumns(ctx context.Context) error {
 
 	case mysqlx.ServerMessages_ERROR:
 		r.state = queryError
-		return newError(b)
+		return r.conn.handleError(b)
 
 	case mysqlx.ServerMessages_RESULTSET_FETCH_DONE:
 		r.state = queryFetchDone
@@ -273,17 +273,12 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = dt
 
 			case mysqlx_resultset.ColumnMetaData_DECIMAL:
+				var d Decimal
 
-				values[index] = b[i:j:j]
-				/*
-
-					var d Decimal
-
-					if err := d.Unmarshal(b[i:j]); err != nil {
-						return err
-					}
-					values[index] = d
-				*/
+				if err := d.Unmarshal(b[i:j]); err != nil {
+					return err
+				}
+				values[index] = d
 			case mysqlx_resultset.ColumnMetaData_ENUM:
 				values[index] = b[i : j-1 : j-1]
 

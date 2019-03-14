@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/renthraysk/mysqlx/authentication"
@@ -22,14 +23,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+type connStatus uint32
+
+const (
+	statusIdle connStatus = iota
+	statusBad
+)
+
+func (c *connStatus) Get() connStatus {
+	return (connStatus)(atomic.LoadUint32((*uint32)(c)))
+}
+
+func (c *connStatus) Set(s connStatus) {
+	atomic.StoreUint32((*uint32)(c), (uint32)(s))
+}
+
 type conn struct {
+	status connStatus
+
 	netConn   net.Conn
 	connector *Connector
 	buf       []byte
 
-	hasClientID bool
-	clientID    uint64
-
+	hasClientID   bool
+	clientID      uint64
 	preparedStmts map[string]uint32
 }
 
@@ -65,12 +82,16 @@ func (c *conn) send(ctx context.Context, m msg.Msg) error {
 	}
 	n, err := m.WriteTo(c.netConn)
 	if err != nil && n == 0 {
-		return driver.ErrBadConn
+		c.status.Set(statusBad)
 	}
 	return err
 }
 
 func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
+	switch c.status.Get() {
+	case statusBad:
+		return nil, driver.ErrBadConn
+	}
 	if err := c.send(ctx, m); err != nil {
 		return nil, err
 	}
@@ -85,7 +106,7 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 			return r, nil
 
 		case mysqlx.ServerMessages_ERROR:
-			return nil, newError(b)
+			return nil, c.handleError(b)
 
 		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
 			return r, nil
@@ -166,6 +187,10 @@ func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.Named
 }
 
 func (c *conn) queryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error) {
+	switch c.status.Get() {
+	case statusBad:
+		return nil, driver.ErrBadConn
+	}
 	if err := c.send(ctx, msg); err != nil {
 		return nil, err
 	}
@@ -280,7 +305,12 @@ func (c *conn) Ping(ctx context.Context) error {
 }
 
 func (c *conn) ResetSession(ctx context.Context) error {
-	return c.connector.sessionResetter(ctx, c)
+	switch c.status.Get() {
+	case statusBad:
+		return driver.ErrBadConn
+	default:
+		return c.connector.sessionResetter(ctx, c)
+	}
 }
 
 func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
@@ -350,7 +380,7 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 			continue
 
 		case mysqlx.ServerMessages_ERROR:
-			return newError(b)
+			return c.handleError(b)
 
 		case mysqlx.ServerMessages_SESS_AUTHENTICATE_OK:
 			return nil
@@ -392,4 +422,12 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 			return errors.Errorf("unexpected server response to AuthenticateStart %s", t.String())
 		}
 	}
+}
+
+func (c *conn) handleError(b []byte) error {
+	err := newError(b)
+	if e, ok := errors.Cause(err).(*Error); ok && e.Severity == SeverityFatal {
+		c.status.Set(statusBad)
+	}
+	return err
 }
