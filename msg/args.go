@@ -134,6 +134,15 @@ func appendArgValues(a Args, values []driver.Value) error {
 	return nil
 }
 
+func AppendArgValues(a Args, values ...interface{}) error {
+	for i, arg := range values {
+		if err := appendArgValue(a, arg); err != nil {
+			return errors.Wrapf(err, "unable to serialize argument %d", i)
+		}
+	}
+	return nil
+}
+
 func appendArgNamedValues(a Args, values []driver.NamedValue) error {
 	for _, arg := range values {
 		if len(arg.Name) > 0 {
