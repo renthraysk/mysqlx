@@ -5,16 +5,16 @@ import (
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 )
 
-// ScalarUint returns the uint64 value of a pb Scalar
-func ScalarUint(s *mysqlx_datatypes.Scalar) (uint64, bool) {
+// scalarUint returns the uint64 value of a pb Scalar
+func scalarUint(s *mysqlx_datatypes.Scalar) (uint64, bool) {
 	if s == nil || s.Type == nil || *s.Type != mysqlx_datatypes.Scalar_V_UINT || s.VUnsignedInt == nil {
 		return 0, false
 	}
 	return *s.VUnsignedInt, true
 }
 
-// ScalarString returns the string value of a pb Scalar
-func ScalarString(s *mysqlx_datatypes.Scalar) (string, collation.Collation, bool) {
+// scalarString returns the string value of a pb Scalar
+func scalarString(s *mysqlx_datatypes.Scalar) (string, collation.Collation, bool) {
 	if s == nil || s.Type == nil || *s.Type != mysqlx_datatypes.Scalar_V_STRING || s.VString == nil {
 		return "", 0, false
 	}
@@ -26,7 +26,7 @@ func ScalarString(s *mysqlx_datatypes.Scalar) (string, collation.Collation, bool
 	return string(s.VString.Value), col, true
 }
 
-func ScalarValue(s *mysqlx_datatypes.Scalar) (interface{}, bool) {
+func scalarValue(s *mysqlx_datatypes.Scalar) (interface{}, bool) {
 	if s == nil || s.Type == nil {
 		return nil, false
 	}

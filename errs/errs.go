@@ -1,7 +1,8 @@
-package mysqlx
+package errs
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -39,7 +40,7 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%s %d (%s): %s", e.Severity, e.Code, e.SQLState, e.Msg)
 }
 
-func newError(b []byte) error {
+func New(b []byte) error {
 	var e mysqlx.Error
 
 	if err := proto.Unmarshal(b, &e); err != nil {
@@ -51,4 +52,19 @@ func newError(b []byte) error {
 		SQLState: e.GetSqlState(),
 		Msg:      e.GetMsg(),
 	}
+}
+
+func IsMySQL(err error) (*Error, bool) {
+	e, ok := errors.Cause(err).(*Error)
+	return e, ok
+}
+
+type Errors map[int]error
+
+func (e Errors) Error() string {
+	var s strings.Builder
+	for i, err := range e {
+		fmt.Fprintf(&s, "* %d: %s\n", i, err)
+	}
+	return s.String()
 }

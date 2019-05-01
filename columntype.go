@@ -312,14 +312,14 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 		default:
 			switch tag >> 3 {
 			case tagColumnMetaDataName:
-				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
+				return fmt.Errorf("wrong wire type: expected BYTES, got %d", tag&7)
 
 			case tagColumnMetaDataType,
 				tagColumnMetaDataCollation,
 				tagColumnMetaDataFractionalDigits,
 				tagColumnMetaDataLength,
 				tagColumnMetaDataFlags:
-				return fmt.Errorf("Wrong wire type: expected VARINT, got %d", tag&7)
+				return fmt.Errorf("wrong wire type: expected VARINT, got %d", tag&7)
 			}
 
 			if tag > 0x7F {
@@ -350,7 +350,7 @@ func (c *ColumnType) Unmarshal(b []byte) error {
 			case proto.WireFixed32:
 				i += 4
 			default:
-				return fmt.Errorf("Unknown wire type (%d)", tag&7)
+				return fmt.Errorf("unknown wire type (%d)", tag&7)
 			}
 		}
 	}

@@ -48,6 +48,50 @@ const (
 	tagOctetContentType = 2
 )
 
+const (
+	tagObjectField = 1
+)
+
+const (
+	tagObjectFieldKey   = 1
+	tagObjectFieldValue = 2
+)
+
+func appendAnyObject(p []byte, tag uint8, m map[string]string) []byte {
+
+	n := 0
+	for k, v := range m {
+		n += 1 + SizeUvarint(uint(len(k))) + len(k) + 1 + SizeUvarint(uint(len(v))) + len(v)
+	}
+	nn := 3 + SizeUvarint(uint(n)) + n
+	p, b := slice.ForAppend(p, 1+SizeUvarint(uint(nn))+nn)
+
+	b[0] = tag<<3 | proto.WireBytes
+	i := 1 + binary.PutUvarint(b[1:], uint64(nn))
+	b[i] = tagAnyType<<3 | proto.WireVarint
+	i++
+	b[i] = byte(mysqlx_datatypes.Any_OBJECT)
+	i++
+	b[i] = tagAnyObject<<3 | proto.WireBytes
+	i++
+	i += binary.PutUvarint(b[i:], uint64(n))
+	for k, v := range m {
+		b[i] = tagObjectField<<3 | proto.WireBytes
+		i++
+		n := 1 + SizeUvarint(uint(len(k))) + len(k) + 1 + SizeUvarint(uint(len(v))) + len(v)
+		i += binary.PutUvarint(b[i:], uint64(n))
+		b[i] = tagObjectFieldKey<<3 | proto.WireBytes
+		i++
+		i += binary.PutUvarint(b[i:], uint64(len(k)))
+		i += copy(b[i:], k)
+		b[i] = tagObjectFieldValue<<3 | proto.WireBytes
+		i++
+		i += binary.PutUvarint(b[i:], uint64(len(v)))
+		i += copy(b[i:], v)
+	}
+	return p
+}
+
 // appendAnyUint appends an Any protobuf representing an uint64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyUint(p []byte, tag uint8, v uint64) []byte {

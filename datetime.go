@@ -106,6 +106,15 @@ func (dt *DateTime) Unmarshal(b []byte) error {
 	return nil
 }
 
+func (dt *DateTime) Scan(src interface{}) error {
+	switch v := src.(type) {
+	case *DateTime:
+		dt = v
+		return nil
+	}
+	return errors.Errorf("unable to convert type %T to %T", src, dt)
+}
+
 type NullDateTime struct {
 	DateTime
 	Valid bool

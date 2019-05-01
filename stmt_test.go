@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrepare(t *testing.T) {
@@ -22,17 +23,18 @@ func TestPrepare(t *testing.T) {
 
 	// Grab single connection
 	cnn, err := db.Conn(ctx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	stmt, err := cnn.PrepareContext(ctx, SQLTEXT)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Make sure our SQL didn't get mangled...
 	rows, err := cnn.QueryContext(ctx, "SELECT 1 from performance_schema.prepared_statements_instances WHERE SQL_TEXT = ?", SQLTEXT)
-	assert.NoError(t, err)
-	assert.True(t, rows.Next())
-	assert.False(t, rows.Next())
-	assert.NoError(t, rows.Close())
+	require.NoError(t, err)
+
+	require.True(t, rows.Next())
+	require.False(t, rows.Next())
+	require.NoError(t, rows.Close())
 
 	values := []interface{}{
 		nil,
@@ -55,25 +57,25 @@ func TestPrepare(t *testing.T) {
 			var r interface{}
 
 			rows, err := stmt.Query(v)
-			assert.NoError(t, err)
-			assert.True(t, rows.Next())
-			assert.NoError(t, rows.Scan(&r))
+			require.NoError(t, err)
+			require.True(t, rows.Next())
+			require.NoError(t, rows.Scan(&r))
 			switch vv := v.(type) {
 			case bool:
 				if vv {
 					// nonzero is true
-					assert.False(t, assert.ObjectsAreEqual(0, r))
+					require.False(t, assert.ObjectsAreEqual(0, r))
 				} else {
-					assert.EqualValues(t, 0, r)
+					require.EqualValues(t, 0, r)
 				}
 			default:
-				assert.EqualValues(t, v, r)
+				require.EqualValues(t, v, r)
 			}
-			assert.NoError(t, rows.Close())
+			require.NoError(t, rows.Close())
 		})
 	}
 
-	assert.NoError(t, stmt.Close())
-	assert.NoError(t, cnn.Close())
-	assert.NoError(t, db.Close())
+	require.NoError(t, stmt.Close())
+	require.NoError(t, cnn.Close())
+	require.NoError(t, db.Close())
 }

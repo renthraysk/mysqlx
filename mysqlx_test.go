@@ -1,13 +1,14 @@
 package mysqlx
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"math"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNull(t *testing.T) {
@@ -15,7 +16,7 @@ func TestNull(t *testing.T) {
 
 	null = 42
 	query(t, "SELECT ?", []interface{}{nil}, func(rows *sql.Rows) error { return rows.Scan(&null) })
-	assert.Nil(t, null)
+	require.Nil(t, null)
 }
 
 func TestBool(t *testing.T) {
@@ -27,7 +28,7 @@ func TestBool(t *testing.T) {
 	out := make([]bool, len(expected))
 
 	query(t, "SELECT ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestUint(t *testing.T) {
@@ -39,7 +40,7 @@ func TestUint(t *testing.T) {
 	out := make([]uint64, len(expected))
 
 	query(t, "SELECT ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestInt(t *testing.T) {
@@ -51,7 +52,7 @@ func TestInt(t *testing.T) {
 	out := make([]int64, len(expected))
 
 	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestFloat32(t *testing.T) {
@@ -64,7 +65,7 @@ func TestFloat32(t *testing.T) {
 	out := make([]float32, len(expected))
 
 	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestFloat64(t *testing.T) {
@@ -77,7 +78,7 @@ func TestFloat64(t *testing.T) {
 	out := make([]float64, len(expected))
 
 	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestString(t *testing.T) {
@@ -89,7 +90,7 @@ func TestString(t *testing.T) {
 	out := make([]string, len(expected))
 
 	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestDuration(t *testing.T) {
@@ -98,7 +99,18 @@ func TestDuration(t *testing.T) {
 
 	query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []interface{}{839*time.Hour - time.Second}, func(rows *sql.Rows) error { return rows.Scan(&d) })
 
-	assert.Equal(t, []byte("838 59 59"), d)
+	require.Equal(t, []byte("838 59 59"), d)
+}
+
+func TestLargeBlob(t *testing.T) {
+
+	var d []byte
+
+	a := bytes.Repeat([]byte{'A', 'B', 'C'}, 4*1024*1024)
+
+	query(t, "SELECT ?", []interface{}{a}, func(rows *sql.Rows) error { return rows.Scan(&d) })
+
+	require.Equal(t, a, d)
 }
 
 func TestBytes(t *testing.T) {
@@ -110,41 +122,44 @@ func TestBytes(t *testing.T) {
 	out := make([][]byte, len(expected))
 
 	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	assert.Equal(t, expected, out)
+	require.Equal(t, expected, out)
 }
 
 func TestRowsAffected(t *testing.T) {
 	db := NewDB(t)
 	defer db.Close()
 
-	_, err := db.ExecContext(context.Background(), "CREATE TEMPORARY TABLE rowsAffected(ID INT)")
-	assert.NoError(t, err)
+	_, err := db.ExecContext(context.Background(), "DROP TABLE IF EXISTS rowsAffected")
+	require.NoError(t, err)
+
+	_, err = db.ExecContext(context.Background(), "CREATE TABLE rowsAffected(ID INT)")
+	require.NoError(t, err)
 	{
 		r, err := db.ExecContext(context.Background(), "INSERT INTO rowsAffected VALUES(?)", 42)
-		assert.NoError(t, err)
-		assert.NotNil(t, r)
+		require.NoError(t, err)
+		require.NotNil(t, r)
 
 		n, err := r.RowsAffected()
-		assert.NoError(t, err)
-		assert.Equal(t, n, int64(1))
+		require.NoError(t, err)
+		require.Equal(t, n, int64(1))
 	}
 	{
 		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 9)
-		assert.NoError(t, err)
-		assert.NotNil(t, r)
+		require.NoError(t, err)
+		require.NotNil(t, r)
 
 		n, err := r.RowsAffected()
-		assert.NoError(t, err)
-		assert.Equal(t, n, int64(0))
+		require.NoError(t, err)
+		require.Equal(t, n, int64(0))
 	}
 	{
 		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 42)
-		assert.NoError(t, err)
-		assert.NotNil(t, r)
+		require.NoError(t, err)
+		require.NotNil(t, r)
 
 		n, err := r.RowsAffected()
-		assert.NoError(t, err)
-		assert.Equal(t, n, int64(1))
+		require.NoError(t, err)
+		require.Equal(t, n, int64(1))
 	}
 }
 
@@ -167,15 +182,15 @@ func TestMultipleResultsets(t *testing.T) {
 	}
 	defer rows.Close()
 
-	assert.True(t, rows.Next(), "rows.Next returned false")
-	assert.NoError(t, rows.Scan(&a))
-	assert.Equal(t, A, a)
-	assert.False(t, rows.Next(), "rows.Next returned true")
-	assert.True(t, rows.NextResultSet(), "rows.NextResulSet returned false")
-	assert.True(t, rows.Next(), "rows.Next returned false")
-	assert.NoError(t, rows.Scan(&b))
-	assert.Equal(t, B, b)
-	assert.False(t, rows.Next(), "rows.Next returned true")
+	require.True(t, rows.Next(), "rows.Next returned false")
+	require.NoError(t, rows.Scan(&a))
+	require.Equal(t, A, a)
+	require.False(t, rows.Next(), "rows.Next returned true")
+	require.True(t, rows.NextResultSet(), "rows.NextResulSet returned false")
+	require.True(t, rows.Next(), "rows.Next returned false")
+	require.NoError(t, rows.Scan(&b))
+	require.Equal(t, B, b)
+	require.False(t, rows.Next(), "rows.Next returned true")
 }
 
 func TestBeginTx(t *testing.T) {
@@ -196,12 +211,12 @@ func TestBeginTx(t *testing.T) {
 	for _, level := range isos {
 		{
 			tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			tx.Rollback()
 		}
 		{
 			tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level, ReadOnly: true})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			tx.Rollback()
 		}
 	}
@@ -222,9 +237,9 @@ func TestQueryTimeout(t *testing.T) {
 	{
 		var val int64
 		rows, err := db.Query("SELECT 42")
-		assert.NoError(t, err)
-		assert.True(t, rows.Next())
-		assert.NoError(t, rows.Scan(&val))
+		require.NoError(t, err)
+		require.True(t, rows.Next())
+		require.NoError(t, rows.Scan(&val))
 	}
 }
 */

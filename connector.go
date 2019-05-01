@@ -1,9 +1,17 @@
 package mysqlx
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
+	"database/sql"
 	"database/sql/driver"
+	"os"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
 
 	"net"
 
@@ -14,25 +22,35 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Option is a functional option for creating the Connector
-type Option func(*Connector) error
+// Dailer interface documenting our requirements for dialing a MySQL server.
+type Dialer interface {
+	DialContext(ctx context.Context, network, address string) (net.Conn, error)
+}
 
 // Connector is the database/sql.Connector implementation
 type Connector struct {
-	network         string
-	addr            string
-	netDialer       net.Dialer
-	tlsConfig       *tls.Config
-	database        string
-	username        string
-	password        string
-	authentication  authentication.Starter
-	sessionResetter SessionResetter
+	network        string
+	addr           string
+	dialer         Dialer
+	tlsConfig      *tls.Config
+	database       string
+	username       string
+	password       string
+	authentication authentication.Starter
+	bufferSize     int
 
-	bufferSize int
+	resetBuild    sync.Once
+	resetKeepOpen bool
+	resetFuncs    []func(b *builder) error
+	reset         []byte
+
+	connectAttrs map[string]string
 }
 
-const minBufferSize = 8 * 1024
+// Option is a functional option for creating the Connector
+type Option func(*Connector) error
+
+const minBufferSize = 4 * 1024
 
 // UserName returns the user name of the account to authenticate with. Part of authentication.Credentials interface.
 func (cnn *Connector) UserName() string { return cnn.username }
@@ -45,13 +63,14 @@ func (cnn *Connector) Database() string { return cnn.database }
 
 // New creates a database/sql.Connector
 func New(network, addr string, options ...Option) (*Connector, error) {
-
 	cnn := &Connector{
-		network:         network,
-		addr:            addr,
-		authentication:  mysql41.New(),
-		sessionResetter: NoSessionResetter,
-		bufferSize:      minBufferSize,
+		dialer:         new(net.Dialer),
+		network:        network,
+		addr:           addr,
+		authentication: mysql41.New(),
+		bufferSize:     minBufferSize,
+
+		resetFuncs: make([]func(b *builder) error, 0, 2),
 	}
 
 	for _, opt := range options {
@@ -59,14 +78,13 @@ func New(network, addr string, options ...Option) (*Connector, error) {
 			return nil, err
 		}
 	}
-
 	return cnn, nil
 }
 
 // WithDialer replaces the default net.Dialer for connecting to mysql.
-func WithDialer(netDialer net.Dialer) Option {
+func WithDialer(dialer Dialer) Option {
 	return func(cnn *Connector) error {
-		cnn.netDialer = netDialer
+		cnn.dialer = dialer
 		return nil
 	}
 }
@@ -106,7 +124,7 @@ func WithTLSConfig(tlsConfig *tls.Config) Option {
 	}
 }
 
-// WithBufferSize sets the internal read/write buffer size. It will be automatically enlarged if larger reads are required.
+// WithBufferSize sets the internal read/write buffer size.
 func WithBufferSize(size int) Option {
 	return func(cnn *Connector) error {
 		if size > minBufferSize {
@@ -116,21 +134,117 @@ func WithBufferSize(size int) Option {
 	}
 }
 
+func WithDefaultConnectAttrs() Option {
+	return func(cnn *Connector) error {
+		if cnn.connectAttrs == nil {
+			cnn.connectAttrs = make(map[string]string, 5)
+		}
+		cnn.connectAttrs["_client_name"] = "mysqlx"
+		cnn.connectAttrs["_pid"] = strconv.Itoa(os.Getpid())
+		cnn.connectAttrs["_platform"] = runtime.GOARCH
+		cnn.connectAttrs["_os"] = runtime.GOOS
+		cnn.connectAttrs["program_name"] = os.Args[0]
+		return nil
+	}
+}
+
+// WithConnectAttrs sets the connection attributes that will be set on connect
+func WithConnectAttrs(attrs map[string]string) Option {
+	return func(cnn *Connector) error {
+		cnn.connectAttrs = attrs
+		return nil
+	}
+}
+
+// WithSQLMode set the default sql_mode
+func WithSQLMode(modes ...string) Option {
+	return func(cnn *Connector) error {
+		cnn.resetFuncs = append(cnn.resetFuncs, func(b *builder) error {
+			return b.WriteStmtExecute("SET SESSION sql_mode = ?", strings.Join(modes, ","))
+		})
+		return nil
+	}
+}
+
+type SessionVars map[string]interface{}
+
+func (sv SessionVars) build(b *builder) error {
+
+	var s bytes.Buffer
+
+	for k, v := range sv {
+		s.Reset()
+		s.WriteString("SET SESSION `")
+		for i := strings.IndexByte(k, '`'); i >= 0; i = strings.IndexByte(k, '`') {
+			i++
+			s.WriteString(k[:i])
+			s.WriteByte('`')
+			k = k[i:]
+		}
+		s.WriteString(k)
+		s.WriteString("` = ?")
+		if err := b.WriteStmtExecute(s.String(), v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WithSessionVars sets/resets mysql session variables on connect and every reset.
+func WithSessionVars(sv SessionVars) Option {
+	return func(cnn *Connector) error {
+		cnn.resetFuncs = append(cnn.resetFuncs, sv.build)
+		return nil
+	}
+}
+
+// WithDefaultTxIsolation sets the default transaction isolation level on connect, and at every reset.
+func WithDefaultTxIsolation(isolationLevel sql.IsolationLevel) Option {
+	set := ""
+	switch isolationLevel {
+	case sql.LevelDefault:
+		return func(cnn *Connector) error { return nil }
+	case sql.LevelReadUncommitted:
+		set = "SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED"
+	case sql.LevelReadCommitted:
+		set = "SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED"
+	case sql.LevelRepeatableRead:
+		set = "SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ"
+	case sql.LevelSerializable:
+		set = "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE"
+	default:
+		return func(cnn *Connector) error {
+			return errors.Errorf("Unsupported default transaction isolation level (%s)", isolationLevel.String())
+		}
+	}
+	return func(cnn *Connector) error {
+		cnn.resetFuncs = append(cnn.resetFuncs, func(b *builder) error {
+			return b.WriteStmtExecute(set)
+		})
+		return nil
+	}
+}
+
 // Connect is the database/sql.Connector Connect() implementation
 func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
-	netConn, err := cnn.netDialer.DialContext(ctx, cnn.network, cnn.addr)
+	netConn, err := cnn.dialer.DialContext(ctx, cnn.network, cnn.addr)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
 
 	conn := &conn{
 		netConn:   netConn,
+		r:         bufio.NewReaderSize(netConn, cnn.bufferSize),
 		connector: cnn,
 		buf:       make([]byte, cnn.bufferSize),
 	}
 
+	// TLS
 	if _, ok := netConn.(*net.TCPConn); ok && cnn.tlsConfig != nil {
-		s := msg.NewCapabilitySetTLSEnable(conn.buf[:0])
+		s, err := msg.CapabilitySetTLS(conn.buf, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal TLS enable CapabilitySet")
+		}
 		if _, err := conn.execMsg(ctx, s); err != nil {
 			netConn.Close()
 			return nil, errors.Wrap(err, "failed to set TLS capability")
@@ -141,11 +255,75 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 			return nil, errors.Wrap(err, "failed TLS handshake")
 		}
 		conn.netConn = tlsConn
+		conn.r.Reset(tlsConn)
 	}
 
+	// Connection Attributes
+	if len(cnn.connectAttrs) > 0 {
+		if cs, err := msg.CapabilitySetSessionConnectAttrs(conn.buf, cnn.connectAttrs); err == nil {
+			switch _, err := conn.execMsg(ctx, cs); err {
+			case context.Canceled, context.DeadlineExceeded:
+				return nil, err
+			default:
+				// Do we care if failed setting connection attributes?
+			}
+		}
+	}
+
+	// Authentication
 	if err := conn.authenticate(ctx); err != nil {
-		conn.Close()
-		return nil, errors.Wrap(err, "failed to authenticate")
+		return nil, err
+	}
+
+	// Build a byte slice to reset mysql session state every reset.
+	// Using err inside this func() to signal err occurring within
+	cnn.resetBuild.Do(func() {
+		// Build byteslice to be written/executed on every connect & reset.
+
+		const ExpectFieldKeepOpen = "6.1"
+
+		// See if MySQL supports session-reset's keepOpen field...
+		b := newBuilder()
+		b.WriteExpectField(ExpectFieldKeepOpen)
+		b.WriteExpectClose()
+
+		switch err = conn.sendN(ctx, b.Bytes()); err {
+		case context.Canceled, context.DeadlineExceeded:
+			return
+		case nil:
+			cnn.resetKeepOpen = true
+		default:
+			err = nil
+		}
+
+		// Determine if have anything to run per reset
+		if !cnn.resetKeepOpen && len(cnn.resetFuncs) == 0 {
+			return
+		}
+		b.Reset()
+		b.WriteExpectOpen(onErrorFail)
+		// If can perform a session reset without needing to reauthenticate
+		// then include session-reset(keepOpen=true) for single write reset.
+		if cnn.resetKeepOpen {
+			b.WriteSessionReset(true)
+		} else {
+			// Using a ping as NOP to ensure error indexes remain consistent for tests.
+			b.WritePing()
+		}
+		for _, f := range cnn.resetFuncs {
+			if err = f(b); err != nil {
+				return
+			}
+		}
+		b.WriteExpectClose()
+		cnn.reset = b.Bytes()
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := conn.sendN(ctx, cnn.reset); err != nil {
+		return nil, err
 	}
 	return conn, nil
 }

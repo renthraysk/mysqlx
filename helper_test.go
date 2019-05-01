@@ -2,7 +2,6 @@ package mysqlx
 
 import (
 	"context"
-	"crypto/tls"
 	"database/sql"
 	"testing"
 )
@@ -12,14 +11,14 @@ const (
 	sockAddress = "/var/run/mysqld/mysqlx.sock"
 )
 
-var tlsConfig = &tls.Config{InsecureSkipVerify: true}
-
 func NewConnector(tb testing.TB) *Connector {
 	tb.Helper()
 
 	connector, err := New("tcp", ipAddress,
 		WithUserPassword("usernative", "passwordnative"),
-		WithDatabase("gotest"))
+		WithDatabase("gotest"),
+		WithDefaultConnectAttrs(),
+	)
 	if err != nil {
 		tb.Fatalf("creating connector failed: %s", err)
 	}

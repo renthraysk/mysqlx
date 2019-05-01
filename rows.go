@@ -259,13 +259,13 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 			case mysqlx_resultset.ColumnMetaData_DATETIME:
 				if column.hasContentType && mysqlx_resultset.ContentType_DATETIME(column.contentType) == mysqlx_resultset.ContentType_DATETIME_DATE {
 					var d Date
-
 					if err := d.Unmarshal(b[i:j]); err != nil {
 						return err
 					}
 					values[index] = d
 					break
 				}
+
 				var dt DateTime
 				if err := dt.Unmarshal(b[i:j]); err != nil {
 					return err
@@ -273,12 +273,8 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = dt
 
 			case mysqlx_resultset.ColumnMetaData_DECIMAL:
-				var d Decimal
+				values[index] = decimal(b[i:j:j])
 
-				if err := d.Unmarshal(b[i:j]); err != nil {
-					return err
-				}
-				values[index] = d
 			case mysqlx_resultset.ColumnMetaData_ENUM:
 				values[index] = b[i : j-1 : j-1]
 
@@ -300,7 +296,7 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 				values[index] = bit
 
 			default:
-				return fmt.Errorf("unknown mysqlx column type %s(%d)", column.fieldType.String(), column.fieldType)
+				return fmt.Errorf("unknown mysqlx column type %s", column.fieldType.String())
 			}
 			i = j
 			// Next column
@@ -309,10 +305,11 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 		default:
 			switch tag >> 3 {
 			case tagRowField:
-				return fmt.Errorf("Wrong wire type: expected BYTES, got %d", tag&7)
+				return fmt.Errorf("wrong wire type: expected BYTES, got %d", tag&7)
 			}
 
 			// Skip over tags & values not familar with
+
 			if tag > 0x7F {
 				i--
 				tag, nn = binary.Uvarint(b[i:])
@@ -341,7 +338,7 @@ func (r *rows) unmarshalRow(b []byte, values []driver.Value) error {
 			case proto.WireFixed32:
 				i += 4
 			default:
-				return fmt.Errorf("Unknown wire type (%d)", tag&7)
+				return fmt.Errorf("unknown wire type (%d)", tag&7)
 			}
 		}
 	}

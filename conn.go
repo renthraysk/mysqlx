@@ -1,6 +1,7 @@
 package mysqlx
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"database/sql"
@@ -13,11 +14,11 @@ import (
 
 	"github.com/renthraysk/mysqlx/authentication"
 	"github.com/renthraysk/mysqlx/authentication/plain"
+	"github.com/renthraysk/mysqlx/errs"
 	"github.com/renthraysk/mysqlx/msg"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_notice"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_session"
-	"github.com/renthraysk/mysqlx/slice"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -26,7 +27,7 @@ import (
 type connStatus uint32
 
 const (
-	statusIdle connStatus = iota
+	statusOK connStatus = iota
 	statusBad
 )
 
@@ -42,6 +43,8 @@ type conn struct {
 	status connStatus
 
 	netConn   net.Conn
+	r         *bufio.Reader
+	discard   int
 	connector *Connector
 	buf       []byte
 
@@ -59,20 +62,36 @@ func (c *conn) replaceBuffer() {
 }
 
 func (c *conn) readMessage(ctx context.Context) (mysqlx.ServerMessages_Type, []byte, error) {
-	s := c.buf[:5]
-	if _, err := io.ReadFull(c.netConn, s); err != nil {
+	if c.discard > 0 {
+		c.r.Discard(c.discard)
+		c.discard = 0
+	}
+	b, err := c.r.Peek(5)
+	if err != nil {
 		return 0, nil, err
 	}
-	n := binary.LittleEndian.Uint32(s)
-	t := mysqlx.ServerMessages_Type(s[4])
+	n := binary.LittleEndian.Uint32(b)
+	t := mysqlx.ServerMessages_Type(b[4])
+	c.r.Discard(5)
 	if n <= 1 {
 		return t, nil, nil
 	}
-	_, s = slice.Allocate(c.buf[:0], int(n)-1)
-	if _, err := io.ReadFull(c.netConn, s); err != nil {
-		return 0, nil, err
+	n--
+	switch b, err = c.r.Peek(int(n)); err {
+	case bufio.ErrBufferFull:
+		if cap(b) < int(n) {
+			c.buf = make([]byte, (n+4095) & ^uint32(4095))
+		}
+		i := copy(c.buf, b)
+		c.r.Discard(i)
+		b = c.buf[:n]
+		_, err = io.ReadFull(c.r, b[i:])
+	case nil:
+		c.discard = int(n)
+
+	default:
 	}
-	return t, s, nil
+	return t, b, err
 }
 
 func (c *conn) send(ctx context.Context, m msg.Msg) error {
@@ -85,6 +104,49 @@ func (c *conn) send(ctx context.Context, m msg.Msg) error {
 		c.status.Set(statusBad)
 	}
 	return err
+}
+
+func (c *conn) sendN(ctx context.Context, b []byte) error {
+	if len(b) == 0 {
+		return nil
+	}
+	deadline, _ := ctx.Deadline()
+	if err := c.netConn.SetDeadline(deadline); err != nil {
+		return errors.Wrap(err, "unable to set deadline")
+	}
+	if _, err := c.netConn.Write(b); err != nil {
+		return errors.Wrap(err, "sending")
+	}
+	var err errs.Errors
+
+	// @TODO Needs to understand expectations, and mimick error handling
+	for i := 0; len(b) >= 5; i++ {
+	read:
+		for {
+			t, s, err2 := c.readMessage(ctx)
+			if err2 != nil {
+				return err2
+			}
+			switch t {
+			case mysqlx.ServerMessages_OK, mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
+				break read
+
+			case mysqlx.ServerMessages_NOTICE:
+
+			case mysqlx.ServerMessages_ERROR:
+				if err == nil {
+					err = make(errs.Errors)
+				}
+				err[i] = errs.New(s)
+				break read
+			}
+		}
+		b = b[binary.LittleEndian.Uint32(b)+4:]
+	}
+	if len(err) > 0 {
+		return err
+	}
+	return nil
 }
 
 func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
@@ -144,25 +206,25 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 				case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
 				case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
 
-					r.lastInsertID, r.hasLastInsertID = ScalarUint(s.Value[0])
+					r.lastInsertID, r.hasLastInsertID = scalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
 					if len(s.Value) != 1 {
-						return nil, errors.New("Unexpected number of rows affected values")
+						return nil, errors.New("unexpected number of rows affected values")
 					}
-					r.rowsAffected, r.hasRowsAffected = ScalarUint(s.Value[0])
+					r.rowsAffected, r.hasRowsAffected = scalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
 					if len(s.Value) != 1 {
-						return nil, errors.New("Unexpected number of rows found values")
+						return nil, errors.New("unexpected number of rows found values")
 					}
-					r.rowsFound, r.hasRowsFound = ScalarUint(s.Value[0])
+					r.rowsFound, r.hasRowsFound = scalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
 					if len(s.Value) != 1 {
-						return nil, errors.New("Unexpected number of rows matched values")
+						return nil, errors.New("unexpected number of rows matched values")
 					}
-					r.rowsMatched, r.hasRowsMatched = ScalarUint(s.Value[0])
+					r.rowsMatched, r.hasRowsMatched = scalarUint(s.Value[0])
 
 				case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
 				case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
@@ -170,7 +232,7 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 				case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
 
 				case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
-					c.clientID, c.hasClientID = ScalarUint(s.Value[0])
+					c.clientID, c.hasClientID = scalarUint(s.Value[0])
 				}
 			}
 		default:
@@ -277,15 +339,17 @@ func (c *conn) BeginTx(ctx context.Context, options driver.TxOptions) (driver.Tx
 		if options.ReadOnly {
 			start = "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"
 		}
-
 	default:
 		return nil, errors.Errorf("Unsupported transaction isolation level (%s)", sql.IsolationLevel(options.Isolation).String())
 	}
 
-	if _, err := c.ExecContext(ctx, set, nil); err != nil {
-		return nil, err
-	}
-	if _, err := c.ExecContext(ctx, start, nil); err != nil {
+	// Instead of round trip per sql stmt, use builder to write once.
+	b := newBuilderBuffer(c.buf[:0])
+	b.WriteExpectOpen(onErrorFail)
+	b.WriteStmtExecute(set)
+	b.WriteStmtExecute(start)
+	b.WriteExpectClose()
+	if err := c.sendN(ctx, b.Bytes()); err != nil {
 		return nil, err
 	}
 	return &tx{c}, nil
@@ -309,7 +373,18 @@ func (c *conn) ResetSession(ctx context.Context) error {
 	case statusBad:
 		return driver.ErrBadConn
 	default:
-		return c.connector.sessionResetter(ctx, c)
+		if !c.connector.resetKeepOpen {
+			if err := c.send(ctx, msg.SessionReset(c.buf[:0], false)); err != nil {
+				return driver.ErrBadConn
+			}
+			if err := c.authenticate(ctx); err != nil {
+				return driver.ErrBadConn
+			}
+		}
+		if err := c.sendN(ctx, c.connector.reset); err != nil {
+			return driver.ErrBadConn
+		}
+		return nil
 	}
 }
 
@@ -334,20 +409,17 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 		if _, ok := nv.Value.(msg.ArgAppender); ok {
 			return nil
 		}
-		return errors.Errorf("Unsupported type %T", nv.Value)
+		return errors.Errorf("unsupported type %T", nv.Value)
 	}
 	return nil
 }
 
 func (c *conn) authenticate(ctx context.Context) error {
-
-	const ErAccessDeniedError = 1045
-
 	err := c.authenticate2(ctx, c.connector.authentication)
 	if err == nil {
 		return nil
 	}
-	if e, ok := errors.Cause(err).(*Error); !ok || e.Code != ErAccessDeniedError {
+	if e, ok := errs.IsMySQL(err); !ok || e.Code != errs.ErAccessDeniedError {
 		return err
 	}
 	switch c.netConn.(type) {
@@ -412,7 +484,7 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 					return nil
 
 				case mysqlx.ServerMessages_ERROR:
-					return newError(b)
+					return c.handleError(b)
 
 				default:
 					return errors.Errorf("unexpected server response to AuthenticateContinue %s", t.String())
@@ -425,8 +497,8 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 }
 
 func (c *conn) handleError(b []byte) error {
-	err := newError(b)
-	if e, ok := errors.Cause(err).(*Error); ok && e.Severity == SeverityFatal {
+	err := errs.New(b)
+	if e, ok := errs.IsMySQL(err); ok && e.Severity == errs.SeverityFatal {
 		c.status.Set(statusBad)
 	}
 	return err
