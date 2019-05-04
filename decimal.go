@@ -31,20 +31,19 @@ func (x *Uint256) AddUint(y uint64) uint64 {
 	return c
 }
 
-// AppendBytes returns the number in little endian order appended to buf
+// AppendBytes returns the number in big endian order appended to buf
 func (x *Uint256) AppendBytes(buf []byte) []byte {
 	var b [32]byte
 
-	binary.LittleEndian.PutUint64(b[0:], x[0])
-	binary.LittleEndian.PutUint64(b[8:], x[1])
-	binary.LittleEndian.PutUint64(b[16:], x[2])
-	binary.LittleEndian.PutUint64(b[24:], x[3])
-	i := 31
-	for i > 0 && b[i] == 0 {
-		i--
+	binary.BigEndian.PutUint64(b[0:], x[3])
+	binary.BigEndian.PutUint64(b[8:], x[2])
+	binary.BigEndian.PutUint64(b[16:], x[1])
+	binary.BigEndian.PutUint64(b[24:], x[0])
+	i := 0
+	for i < 31 && b[i] == 0 {
+		i++
 	}
-	i++
-	return append(buf, b[:i]...)
+	return append(buf, b[i:]...)
 }
 
 // mul10add x = x*10 + y
