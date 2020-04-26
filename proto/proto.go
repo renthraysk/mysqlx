@@ -53,9 +53,15 @@ func PutUvarint(b []byte, x uint64) int {
 func AppendWireString(p []byte, tag uint8, value string) []byte {
 	x := uint(len(value))
 	n := SizeVarint(x)
-	p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
-		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
-	n += len(p) - MaxVarintLen64
+
+	if bits.UintSize == 32 {
+		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28))
+		n += len(p) - MaxVarintLen32
+	} else {
+		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
+			byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+		n += len(p) - MaxVarintLen64
+	}
 	p[n-1] &= 0x7F
 	return append(p[:n], value...)
 }
@@ -63,9 +69,14 @@ func AppendWireString(p []byte, tag uint8, value string) []byte {
 func AppendWireBytes(p []byte, tag uint8, value []byte) []byte {
 	x := uint(len(value))
 	n := SizeVarint(x)
-	p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
-		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
-	n += len(p) - MaxVarintLen64
+	if bits.UintSize == 32 {
+		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28))
+		n += len(p) - MaxVarintLen32
+	} else {
+		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
+			byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+		n += len(p) - MaxVarintLen64
+	}
 	p[n-1] &= 0x7F
 	return append(p[:n], value...)
 }
