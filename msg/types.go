@@ -38,6 +38,13 @@ func (g Geometry) AppendArg(a Args) error {
 	return nil
 }
 
+type GeometryString string
+
+func (g GeometryString) AppendArg(a Args) error {
+	a.AppendArgBytesString(string(g), ContentTypeGeometry)
+	return nil
+}
+
 type JSON []byte
 
 func (j JSON) AppendArg(a Args) error {
@@ -45,9 +52,23 @@ func (j JSON) AppendArg(a Args) error {
 	return nil
 }
 
+type JSONString string
+
+func (j JSONString) AppendArg(a Args) error {
+	a.AppendArgBytesString(string(j), ContentTypeJSON)
+	return nil
+}
+
 type XML []byte
 
 func (x XML) AppendArg(a Args) error {
 	a.AppendArgBytes(x, ContentTypeXML)
+	return nil
+}
+
+type XMLString string
+
+func (x XMLString) AppendArg(a Args) error {
+	a.AppendArgBytesString(string(x), ContentTypeXML)
 	return nil
 }

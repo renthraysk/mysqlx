@@ -81,6 +81,11 @@ func (s *StmtExecute) AppendArgBytes(bytes []byte, contentType ContentType) {
 	*s = appendAnyBytes(*s, tagStmtExecuteArgs, bytes, contentType)
 }
 
+// AppendArgBytesString appends a content typed XML/JSON/Geometry parameter
+func (s *StmtExecute) AppendArgBytesString(str string, contentType ContentType) {
+	*s = appendAnyBytesString(*s, tagStmtExecuteArgs, str, contentType)
+}
+
 // AppendArgString appends a string parameter
 func (s *StmtExecute) AppendArgString(str string, collation collation.Collation) {
 	*s = appendAnyString(*s, tagStmtExecuteArgs, str, collation)

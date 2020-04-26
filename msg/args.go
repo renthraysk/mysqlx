@@ -20,6 +20,7 @@ type Args interface {
 
 	AppendArgString(string, collation.Collation)
 	AppendArgBytes([]byte, ContentType)
+	AppendArgBytesString(string, ContentType)
 
 	AppendArgFloat32(float32)
 	AppendArgFloat64(float64)

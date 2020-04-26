@@ -92,6 +92,11 @@ func (s *Execute) AppendArgBytes(bytes []byte, contentType ContentType) {
 	*s = appendAnyBytes(*s, tagExecuteArgs, bytes, contentType)
 }
 
+// AppendArgBytes appends an binary parameter
+func (s *Execute) AppendArgBytesString(str string, contentType ContentType) {
+	*s = appendAnyBytesString(*s, tagExecuteArgs, str, contentType)
+}
+
 // AppendArgString appends a string parameter
 func (s *Execute) AppendArgString(str string, collation collation.Collation) {
 	*s = appendAnyString(*s, tagExecuteArgs, str, collation)
