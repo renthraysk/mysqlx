@@ -12,6 +12,7 @@ func SizeUvarint32(x uint32) int {
 	return int(9*uint32(bits.Len32(x))+64) / 64
 }
 
+// SizeUvarint returns the number of bytes required to store a uint in base128/varint encoding
 func SizeUvarint(x uint) int {
 	return int(9*uint32(bits.Len(x))+64) / 64
 }
