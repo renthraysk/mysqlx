@@ -13,7 +13,7 @@ func New() *Auth {
 	return &Auth{}
 }
 
-func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.AuthenticateStart {
+func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.MsgBytes {
 	n := len(credentials.Database()) + 1 + len(credentials.UserName()) + 1 + len(credentials.Password())
 
 	buf, ad := slice.Allocate(buf, n)
@@ -26,7 +26,5 @@ func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.Authen
 	i++
 	copy(ad[i:], credentials.Password())
 
-	m := msg.NewAuthenticateStart(buf, "PLAIN")
-	m.SetAuthData(ad)
-	return m
+	return msg.NewAuthenticateStart(buf, "PLAIN", ad)
 }

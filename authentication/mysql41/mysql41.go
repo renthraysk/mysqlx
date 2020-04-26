@@ -16,8 +16,8 @@ func New() *Auth {
 	return &Auth{}
 }
 
-func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.AuthenticateStart {
-	return msg.NewAuthenticateStart(buf, "MYSQL41")
+func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.MsgBytes {
+	return msg.NewAuthenticateStart(buf, "MYSQL41", nil)
 }
 
 func (Auth) Continue(buf []byte, credentials authentication.Credentials, authData []byte) msg.MsgBytes {
