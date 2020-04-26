@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 type Date struct {
@@ -23,16 +21,16 @@ func (d *Date) Unmarshal(b []byte) error {
 
 	d.Year, i = binary.Uvarint(b)
 	if i <= 0 {
-		return errors.Errorf("failed to decode year (%x)", b)
+		return fmt.Errorf("failed to decode year (%x)", b)
 	}
 	d.Month, j = binary.Uvarint(b[i:])
 	if j <= 0 {
-		return errors.Errorf("failed to decode month (%x)", b)
+		return fmt.Errorf("failed to decode month (%x)", b)
 	}
 	i += j
 	d.Day, j = binary.Uvarint(b[i:])
 	if j <= 0 {
-		return errors.Errorf("failed to decode day (%x)", b)
+		return fmt.Errorf("failed to decode day (%x)", b)
 	}
 	return nil
 }
@@ -55,7 +53,7 @@ func (d *NullDate) Scan(src interface{}) error {
 		d.Date = v
 		return nil
 	}
-	return errors.Errorf("unable to convert type %T to %T", src, d)
+	return fmt.Errorf("unable to convert type %T to %T", src, d)
 }
 
 type DateTime struct {
@@ -75,16 +73,16 @@ func (dt *DateTime) Unmarshal(b []byte) error {
 
 	dt.Year, i = binary.Uvarint(b)
 	if i <= 0 {
-		return errors.Errorf("failed to decode datetime year (%x)", b)
+		return fmt.Errorf("failed to decode datetime year (%x)", b)
 	}
 	dt.Month, j = binary.Uvarint(b[i:])
 	if j <= 0 {
-		return errors.Errorf("failed to decode datetime month (%x)", b)
+		return fmt.Errorf("failed to decode datetime month (%x)", b)
 	}
 	i += j
 	dt.Day, j = binary.Uvarint(b[i:])
 	if j <= 0 {
-		return errors.Errorf("failed to decode datetime day (%x)", b)
+		return fmt.Errorf("failed to decode datetime day (%x)", b)
 	}
 	i += j
 	dt.Hour, j = binary.Uvarint(b[i:])
@@ -101,7 +99,7 @@ func (dt *DateTime) Unmarshal(b []byte) error {
 		}
 	}
 	if j < 0 {
-		return errors.Errorf("failed to decode datetime time (%x)", b)
+		return fmt.Errorf("failed to decode datetime time (%x)", b)
 	}
 	return nil
 }
@@ -112,7 +110,7 @@ func (dt *DateTime) Scan(src interface{}) error {
 		dt = v
 		return nil
 	}
-	return errors.Errorf("unable to convert type %T to %T", src, dt)
+	return fmt.Errorf("unable to convert type %T to %T", src, dt)
 }
 
 type NullDateTime struct {
@@ -133,13 +131,13 @@ func (dt *NullDateTime) Scan(src interface{}) error {
 		dt.DateTime = v
 		return nil
 	}
-	return errors.Errorf("unable to convert type %T to %T", src, dt)
+	return fmt.Errorf("unable to convert type %T to %T", src, dt)
 }
 
 func parseDuration(b []byte) (time.Duration, error) {
 	v, i := binary.Uvarint(b[1:])
 	if i < 0 {
-		return 0, errors.Errorf("failed to decode time (%x)", b)
+		return 0, fmt.Errorf("failed to decode time (%x)", b)
 	}
 	d := time.Duration(v) * time.Hour
 	if i > 0 {
@@ -157,7 +155,7 @@ func parseDuration(b []byte) (time.Duration, error) {
 			}
 		}
 		if j < 0 {
-			return 0, errors.Errorf("failed to decode time (%x)", b)
+			return 0, fmt.Errorf("failed to decode time (%x)", b)
 		}
 	}
 

@@ -7,19 +7,17 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
+	"net"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 
-	"net"
-
 	"github.com/renthraysk/mysqlx/authentication"
 	"github.com/renthraysk/mysqlx/authentication/mysql41"
 	"github.com/renthraysk/mysqlx/msg"
-
-	"github.com/pkg/errors"
 )
 
 // Dailer interface documenting our requirements for dialing a MySQL server.
@@ -214,7 +212,7 @@ func WithDefaultTxIsolation(isolationLevel sql.IsolationLevel) Option {
 		set = "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE"
 	default:
 		return func(cnn *Connector) error {
-			return errors.Errorf("Unsupported default transaction isolation level (%s)", isolationLevel.String())
+			return fmt.Errorf("Unsupported default transaction isolation level (%s)", isolationLevel.String())
 		}
 	}
 	return func(cnn *Connector) error {
@@ -229,7 +227,7 @@ func WithDefaultTxIsolation(isolationLevel sql.IsolationLevel) Option {
 func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	netConn, err := cnn.dialer.DialContext(ctx, cnn.network, cnn.addr)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to dial")
+		return nil, fmt.Errorf("failed to dial: %w", err)
 	}
 
 	conn := &conn{
@@ -243,16 +241,16 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	if _, ok := netConn.(*net.TCPConn); ok && cnn.tlsConfig != nil {
 		s, err := msg.CapabilitySetTLS(conn.buf, true)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal TLS enable CapabilitySet")
+			return nil, fmt.Errorf("failed to marshal TLS enable CapabilitySet: %w", err)
 		}
 		if _, err := conn.execMsg(ctx, s); err != nil {
 			netConn.Close()
-			return nil, errors.Wrap(err, "failed to set TLS capability")
+			return nil, fmt.Errorf("failed to set TLS capability: %w", err)
 		}
 		tlsConn := tls.Client(netConn, cnn.tlsConfig)
 		if err := tlsConn.Handshake(); err != nil {
 			tlsConn.Close()
-			return nil, errors.Wrap(err, "failed TLS handshake")
+			return nil, fmt.Errorf("failed TLS handshake: %w", err)
 		}
 		conn.netConn = tlsConn
 		conn.r.Reset(tlsConn)

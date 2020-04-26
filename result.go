@@ -1,9 +1,8 @@
 package mysqlx
 
 import (
+	"errors"
 	"math"
-
-	"github.com/pkg/errors"
 )
 
 type result struct {

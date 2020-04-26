@@ -2,11 +2,12 @@ package msg
 
 import (
 	"database/sql/driver"
+	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/renthraysk/mysqlx/collation"
 )
 
@@ -119,7 +120,7 @@ derefLoop:
 			goto derefLoop
 
 		default:
-			return errors.Errorf("unsupported type %T, a %s", value, rv.Kind())
+			return fmt.Errorf("unsupported type %T, a %s", value, rv.Kind())
 		}
 	}
 	return nil
@@ -128,7 +129,7 @@ derefLoop:
 func appendArgValues(a Args, values []driver.Value) error {
 	for i, arg := range values {
 		if err := appendArgValue(a, arg); err != nil {
-			return errors.Wrapf(err, "unable to serialize argument %d", i)
+			return fmt.Errorf("unable to serialize argument %d: %w", i, err)
 		}
 	}
 	return nil
@@ -137,7 +138,7 @@ func appendArgValues(a Args, values []driver.Value) error {
 func AppendArgValues(a Args, values ...interface{}) error {
 	for i, arg := range values {
 		if err := appendArgValue(a, arg); err != nil {
-			return errors.Wrapf(err, "unable to serialize argument %d", i)
+			return fmt.Errorf("unable to serialize argument %d: %w", i, err)
 		}
 	}
 	return nil
@@ -149,7 +150,7 @@ func appendArgNamedValues(a Args, values []driver.NamedValue) error {
 			return errors.New("mysql does not support the use of named parameters")
 		}
 		if err := appendArgValue(a, arg.Value); err != nil {
-			return errors.Wrapf(err, "unable to serialize named argument %d", arg.Ordinal)
+			return fmt.Errorf("unable to serialize named argument %d: %w", arg.Ordinal, err)
 		}
 	}
 	return nil

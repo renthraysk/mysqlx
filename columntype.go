@@ -3,13 +3,13 @@ package mysqlx
 import (
 	"database/sql"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 
 	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
@@ -105,7 +105,7 @@ func (n *NullUint64) Scan(src interface{}) error {
 		n.Valid = i > 0
 		n.Value = u
 	default:
-		return errors.Errorf("unable to convert type %T to NullInt64", src)
+		return fmt.Errorf("unable to convert type %T to NullInt64", src)
 	}
 	return nil
 }

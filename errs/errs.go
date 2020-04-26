@@ -1,11 +1,11 @@
 package errs
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 )
 
@@ -44,7 +44,7 @@ func New(b []byte) error {
 	var e mysqlx.Error
 
 	if err := proto.Unmarshal(b, &e); err != nil {
-		return errors.Wrapf(err, "failed to unmarshal mysqlx.Error %x", b)
+		return fmt.Errorf("failed to unmarshal mysqlx.Error %x: %w", b, err)
 	}
 	return &Error{
 		Severity: Severity(e.GetSeverity()),
@@ -55,7 +55,8 @@ func New(b []byte) error {
 }
 
 func IsMySQL(err error) (*Error, bool) {
-	e, ok := errors.Cause(err).(*Error)
+	var e *Error
+	ok := errors.As(err, &e)
 	return e, ok
 }
 

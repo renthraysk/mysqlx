@@ -13,7 +13,6 @@ import (
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -61,7 +60,7 @@ func (r *rows) readColumns(ctx context.Context) error {
 		n--
 		ct := &buf[n]
 		if err := ct.Unmarshal(b); err != nil {
-			return errors.Wrap(err, "failed to unmarshal column metadata")
+			return fmt.Errorf("failed to unmarshal column metadata: %w", err)
 		}
 		r.columns = append(r.columns, ct)
 		t, b, err = r.conn.readMessage(ctx)
