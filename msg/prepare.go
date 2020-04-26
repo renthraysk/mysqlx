@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/renthraysk/mysqlx/collation"
+	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_prepare"
 	"github.com/renthraysk/mysqlx/slice"
@@ -25,10 +25,10 @@ func NewPrepare(buf []byte, id uint32, stmt string) Msg {
 	)
 
 	n := len(stmt)
-	n1 := 1 + SizeUvarint(uint(n)) + n
-	n2 := 3 + SizeUvarint(uint(n1)) + n1
+	n1 := 1 + proto.SizeVarint(uint(n)) + n
+	n2 := 3 + proto.SizeVarint(uint(n1)) + n1
 
-	_, b := slice.Allocate(buf, 4+1+1+SizeUvarint32(id)+1+SizeUvarint(uint(n2))+n2)
+	_, b := slice.Allocate(buf, 4+1+1+proto.SizeVarint32(id)+1+proto.SizeVarint(uint(n2))+n2)
 
 	b[4] = byte(mysqlx.ClientMessages_PREPARE_PREPARE)
 
@@ -62,7 +62,7 @@ const (
 type Execute []byte
 
 func NewExecute(buf []byte, id uint32) Execute {
-	n := SizeUvarint32(id)
+	n := proto.SizeVarint32(id)
 	_, b := slice.Allocate(buf, 4+1+1+n)
 
 	binary.PutUvarint(b[6:], uint64(id))
@@ -143,7 +143,7 @@ const (
 )
 
 func NewDeallocate(buf []byte, id uint32) MsgBytes {
-	_, b := slice.Allocate(buf, 4+1+1+SizeUvarint32(id))
+	_, b := slice.Allocate(buf, 4+1+1+proto.SizeVarint32(id))
 	binary.PutUvarint(b[6:], uint64(id))
 	b[4] = byte(mysqlx.ClientMessages_PREPARE_DEALLOCATE)
 	b[5] = tagDeallocateStmtID<<3 | proto.WireVarint

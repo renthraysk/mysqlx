@@ -20,10 +20,9 @@ import (
 	"io"
 
 	"github.com/renthraysk/mysqlx/collation"
+	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/slice"
-
-	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -39,9 +38,9 @@ type StmtExecute []byte
 // NewStmtExecute creates a new StmtExecute which attempts to use the unused capacity of buf.
 func NewStmtExecute(buf []byte, stmt string) StmtExecute {
 	n := len(stmt)
-	i := SizeUvarint64(uint64(n))
+	i := proto.SizeVarint(uint(len(stmt)))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
-	binary.PutUvarint(b[6:], uint64(n))
+	proto.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SQL_STMT_EXECUTE)
 	b[5] = tagStmtExecuteStmt<<3 | proto.WireBytes
 	copy(b[6+i:], stmt)
@@ -58,10 +57,10 @@ func (s StmtExecute) WriteTo(w io.Writer) (int64, error) {
 // SetNamespace serialises the Namespace field of the StmtExecute protobuf.
 func (s *StmtExecute) SetNamespace(namespace string) {
 	n := len(namespace)
-	i := SizeUvarint64(uint64(n))
+	i := proto.SizeVarint(uint(n))
 	b := *s
 	*s, b = slice.ForAppend(b, 1+i+n)
-	binary.PutUvarint(b[1:], uint64(n))
+	proto.PutUvarint(b[1:], uint64(n))
 	b[0] = tagStmtExecuteNamespace<<3 | proto.WireBytes
 	copy(b[1+i:], namespace)
 }

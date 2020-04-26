@@ -4,10 +4,9 @@ import (
 	"encoding/binary"
 	"io"
 
+	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/slice"
-
-	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -26,9 +25,9 @@ type AuthenticateStart []byte
 // NewAuthenticateStart marshals a AuthenticateStart protobuf message
 func NewAuthenticateStart(buf []byte, mechName string) AuthenticateStart {
 	n := len(mechName)
-	i := SizeUvarint64(uint64(n))
+	i := proto.SizeVarint(uint(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
-	binary.PutUvarint(b[6:], uint64(n))
+	proto.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_START)
 	b[5] = tagAuthenticateStartMechName<<3 | proto.WireBytes
 	copy(b[6+i:], mechName)
@@ -45,7 +44,7 @@ func (a AuthenticateStart) WriteTo(w io.Writer) (int64, error) {
 // SetAuthData sets the optional authentication data, only used for plain authentication mechanism.
 func (a *AuthenticateStart) SetAuthData(authData []byte) {
 	n := len(authData)
-	i := SizeUvarint64(uint64(n))
+	i := proto.SizeVarint(uint(n))
 	b := *a
 	*a, b = slice.ForAppend(b, 1+i+n)
 	binary.PutUvarint(b[1:], uint64(n))
@@ -56,7 +55,7 @@ func (a *AuthenticateStart) SetAuthData(authData []byte) {
 // NewAuthenticateContinue marshals AuthenticateContinue protobuf message
 func NewAuthenticateContinue(buf []byte, authData []byte) MsgBytes {
 	n := len(authData)
-	i := SizeUvarint64(uint64(n))
+	i := proto.SizeVarint(uint(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
 	binary.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_CONTINUE)

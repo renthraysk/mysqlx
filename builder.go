@@ -5,10 +5,9 @@ import (
 	"encoding/binary"
 
 	"github.com/renthraysk/mysqlx/msg"
+	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_expect"
-
-	"github.com/golang/protobuf/proto"
 )
 
 type builder struct {
@@ -65,7 +64,7 @@ func (b *builder) WriteExpectOpen(onError onError) error {
 
 func (b *builder) WriteExpectField(field string) error {
 	n := len(field)
-	i := 8 + binary.PutUvarint(b.tmp[8:], uint64(2+1+msg.SizeUvarint(uint(n))+n))
+	i := 8 + proto.PutUvarint(b.tmp[8:], uint64(2+1+proto.SizeVarint(uint(n))+n))
 	b.tmp[4] = byte(mysqlx.ClientMessages_EXPECT_OPEN)
 	b.tmp[5] = tagOpenOperation<<3 | proto.WireVarint
 	b.tmp[6] = byte(mysqlx_expect.Open_EXPECT_CTX_EMPTY)
@@ -77,7 +76,7 @@ func (b *builder) WriteExpectField(field string) error {
 	i++
 	b.tmp[i] = tagConditionValue<<3 | proto.WireBytes
 	i++
-	i += binary.PutUvarint(b.tmp[i:], uint64(n))
+	i += proto.PutUvarint(b.tmp[i:], uint64(n))
 	binary.LittleEndian.PutUint32(b.tmp[:], uint32(i+n-4))
 	_, err := b.buf.Write(b.tmp[:i])
 	if err == nil {
