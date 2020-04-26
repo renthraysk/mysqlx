@@ -34,10 +34,10 @@ func NewPrepare(buf []byte, id uint32, stmt string) Msg {
 
 	// Prepare
 	b[5] = tagPrepareStmtId<<3 | proto.WireVarint
-	i := 6 + binary.PutUvarint(b[6:], uint64(id))
+	i := 6 + proto.PutUvarint(b[6:], uint64(id))
 	b[i] = tagPrepareStmt<<3 | proto.WireBytes
 	i++
-	i += binary.PutUvarint(b[i:], uint64(n2))
+	i += proto.PutUvarint(b[i:], uint64(n2))
 	// PrepareOneOf
 	b[i] = tagPrepareOneOfType<<3 | proto.WireVarint
 	i++
@@ -45,11 +45,11 @@ func NewPrepare(buf []byte, id uint32, stmt string) Msg {
 	i++
 	b[i] = tagPrepareOneOfExecute<<3 | proto.WireBytes
 	i++
-	i += binary.PutUvarint(b[i:], uint64(n1))
+	i += proto.PutUvarint(b[i:], uint64(n1))
 	// Execute
 	b[i] = tagStmtExecuteStmt<<3 | proto.WireBytes
 	i++
-	i += binary.PutUvarint(b[i:], uint64(n))
+	i += proto.PutUvarint(b[i:], uint64(n))
 	copy(b[i:], stmt)
 	return MsgBytes(b)
 }
@@ -65,7 +65,7 @@ func NewExecute(buf []byte, id uint32) Execute {
 	n := proto.SizeVarint32(id)
 	_, b := slice.Allocate(buf, 4+1+1+n)
 
-	binary.PutUvarint(b[6:], uint64(id))
+	proto.PutUvarint(b[6:], uint64(id))
 	b[4] = byte(mysqlx.ClientMessages_PREPARE_EXECUTE)
 	b[5] = tagExecuteStmtId<<3 | proto.WireVarint
 	return Execute(b)
@@ -144,7 +144,7 @@ const (
 
 func NewDeallocate(buf []byte, id uint32) MsgBytes {
 	_, b := slice.Allocate(buf, 4+1+1+proto.SizeVarint32(id))
-	binary.PutUvarint(b[6:], uint64(id))
+	proto.PutUvarint(b[6:], uint64(id))
 	b[4] = byte(mysqlx.ClientMessages_PREPARE_DEALLOCATE)
 	b[5] = tagDeallocateStmtID<<3 | proto.WireVarint
 	return MsgBytes(b)

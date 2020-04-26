@@ -47,7 +47,7 @@ func (a *AuthenticateStart) SetAuthData(authData []byte) {
 	i := proto.SizeVarint(uint(n))
 	b := *a
 	*a, b = slice.ForAppend(b, 1+i+n)
-	binary.PutUvarint(b[1:], uint64(n))
+	proto.PutUvarint(b[1:], uint64(n))
 	b[0] = tagAuthenticateStartAuthData<<3 | proto.WireBytes
 	copy(b[1+i:], authData)
 }
@@ -57,7 +57,7 @@ func NewAuthenticateContinue(buf []byte, authData []byte) MsgBytes {
 	n := len(authData)
 	i := proto.SizeVarint(uint(n))
 	buf, b := slice.Allocate(buf, 4+1+1+i+n)
-	binary.PutUvarint(b[6:], uint64(n))
+	proto.PutUvarint(b[6:], uint64(n))
 	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_CONTINUE)
 	b[5] = tagAuthenticateContinueAuthData<<3 | proto.WireBytes
 	copy(b[6+i:], authData)
