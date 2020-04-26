@@ -260,13 +260,12 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 
 	// Connection Attributes
 	if len(cnn.connectAttrs) > 0 {
-		if cs, err := msg.CapabilitySetSessionConnectAttrs(conn.buf, cnn.connectAttrs); err == nil {
-			switch _, err := conn.execMsg(ctx, cs); err {
-			case context.Canceled, context.DeadlineExceeded:
-				return nil, err
-			default:
-				// Do we care if failed setting connection attributes?
-			}
+		cs, err := msg.CapabilitySetSessionConnectAttrs(conn.buf, cnn.connectAttrs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal session connection attributes: %w", err)
+		}
+		if _, err := conn.execMsg(ctx, cs); err != nil {
+			return nil, fmt.Errorf("failed to set session connection attributes: %w", err)
 		}
 	}
 

@@ -68,13 +68,13 @@ func TestInitSQLModeError(t *testing.T) {
 		t.Fatalf("failed to trigger error setting @@sql_mode to an invalid value")
 	}
 
-	var ers *errs.Errors
+	var ers errs.Errors
 
 	if !errors.As(err, &ers) {
-		t.Fatalf("expected mysqlx.Errors")
+		t.Fatalf("expected mysqlx.Errors, got %T", err)
 	}
 	// Error happens on the third statement... first is an expect open, 2nd is session-reset(keepOpen=true) or just ping (pre mysql 8.0.16)
-	if e, ok := (*ers)[2].(*errs.Error); !ok ||
+	if e, ok := (ers)[2].(*errs.Error); !ok ||
 		e.Code != errs.ErWrongValueForVar ||
 		e.Msg != "Variable 'sql_mode' can't be set to the value of 'NONSENSE'" {
 		t.Fatalf("unexpected error: %s", err)
