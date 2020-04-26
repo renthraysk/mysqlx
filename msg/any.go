@@ -210,8 +210,8 @@ func appendAnyFloat64(p []byte, tag uint8, f float64) []byte {
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 11,
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_DOUBLE),
-		tagScalarDouble<<3|proto.WireFixed64, byte(x), byte(x>>8), byte(x>>16), byte(x>>24), byte(x>>32),
-		byte(x>>40), byte(x>>48), byte(x>>56))
+		tagScalarDouble<<3|proto.WireFixed64, byte(x), byte(x>>8), byte(x>>16), byte(x>>24),
+		byte(x>>32), byte(x>>40), byte(x>>48), byte(x>>56))
 }
 
 // appendAnyFloat32 appends an Any protobuf representing a float32 value
