@@ -114,7 +114,7 @@ func TestLargeBlob(t *testing.T) {
 }
 
 func TestBytes(t *testing.T) {
-	expected := [][]byte{[]byte{}, []byte{0x00}, []byte("abcdef")}
+	expected := [][]byte{{}, {0x00}, []byte("abcdef")}
 	in := make([]interface{}, len(expected))
 	for i := 0; i < len(expected); i++ {
 		in[i] = interface{}(expected[i])
