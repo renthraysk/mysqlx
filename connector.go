@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/renthraysk/mysqlx/authentication"
 	"github.com/renthraysk/mysqlx/authentication/mysql41"
+	"github.com/renthraysk/mysqlx/errs"
 	"github.com/renthraysk/mysqlx/msg"
 )
 
@@ -285,12 +287,18 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 		b.WriteExpectField(ExpectFieldKeepOpen)
 		b.WriteExpectClose()
 
-		switch err = conn.sendN(ctx, b.Bytes()); err {
-		case context.Canceled, context.DeadlineExceeded:
-			return
-		case nil:
-			cnn.resetKeepOpen = true
-		default:
+		cnn.resetKeepOpen = true
+		if err = conn.sendN(ctx, b.Bytes()); err != nil {
+			var e *errs.Errors
+			if !errors.As(err, &e) {
+				return
+			}
+			var e0 *errs.Error
+			if !errors.As((*e)[0], &e0) || e0.Code != errs.ErXExpectFieldExistsFailed {
+				return
+			}
+			// No session-reset(keep-open) support.
+			cnn.resetKeepOpen = false
 			err = nil
 		}
 
