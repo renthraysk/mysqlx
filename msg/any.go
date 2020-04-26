@@ -1,7 +1,6 @@
 package msg
 
 import (
-	"encoding/binary"
 	"math"
 
 	"github.com/renthraysk/mysqlx/collation"
@@ -49,46 +48,33 @@ const (
 
 // appendAnyUint appends an Any protobuf representing an uint64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
-func appendAnyUint(p []byte, tag uint8, v uint64) []byte {
-	n := proto.SizeVarint64(v)
-	p, b := slice.ForAppend(p, 9+n)
-
-	// First for bounds checking elimination
-	proto.PutUvarint(b[9:], v)
-	b[0] = tag<<3 | proto.WireBytes
-	b[1] = 7 + byte(n)
-	// Any
-	b[2] = tagAnyType<<3 | proto.WireVarint
-	b[3] = byte(mysqlx_datatypes.Any_SCALAR)
-	b[4] = tagAnyScalar<<3 | proto.WireBytes
-	b[5] = 3 + byte(n)
-	// Scalar
-	b[6] = tagScalarType<<3 | proto.WireVarint
-	b[7] = byte(mysqlx_datatypes.Scalar_V_UINT)
-	b[8] = tagScalarUint<<3 | proto.WireVarint
-	return p
+func appendAnyUint(p []byte, tag uint8, x uint64) []byte {
+	n := proto.SizeVarint64(x)
+	p = append(p, tag<<3|proto.WireBytes, 7+byte(n),
+		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
+		tagAnyScalar<<3|proto.WireBytes, 3+byte(n),
+		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_UINT),
+		tagScalarUint<<3|proto.WireVarint, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
+		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+	n += len(p) - proto.MaxVarintLen64
+	p[n-1] &= 0x7F
+	return p[:n]
 }
 
 // appendAnyInt appends an Any protobuf representing an int64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyInt(p []byte, tag uint8, v int64) []byte {
-	u := (uint64(v) << 1) ^ uint64(v>>63)
-	n := proto.SizeVarint64(u)
-	p, b := slice.ForAppend(p, 9+n)
-
-	proto.PutUvarint(b[9:], u)
-	b[0] = tag<<3 | proto.WireBytes
-	b[1] = 7 + byte(n)
-	// Any
-	b[2] = tagAnyType<<3 | proto.WireVarint
-	b[3] = byte(mysqlx_datatypes.Any_SCALAR)
-	b[4] = tagAnyScalar<<3 | proto.WireBytes
-	b[5] = 3 + byte(n)
-	// Scalar
-	b[6] = tagScalarType<<3 | proto.WireVarint
-	b[7] = byte(mysqlx_datatypes.Scalar_V_SINT)
-	b[8] = tagScalarSint<<3 | proto.WireVarint
-	return p
+	x := (uint64(v) << 1) ^ uint64(v>>63)
+	n := proto.SizeVarint64(x)
+	p = append(p, tag<<3|proto.WireBytes, 7+byte(n),
+		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
+		tagAnyScalar<<3|proto.WireBytes, 3+byte(n),
+		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_SINT),
+		tagScalarSint<<3|proto.WireVarint, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
+		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+	n += len(p) - proto.MaxVarintLen64
+	p[n-1] &= 0x7F
+	return p[:n]
 }
 
 // appendAnyBytes appends an Any protobuf representing an octet ([]byte) value
@@ -219,39 +205,34 @@ func appendAnyString(p []byte, tag uint8, s string, collation collation.Collatio
 // appendAnyFloat64 appends an Any protobuf representing a float64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyFloat64(p []byte, tag uint8, f float64) []byte {
-	p = append(p, tag<<3|proto.WireBytes, 15,
+	x := math.Float64bits(f)
+	return append(p, tag<<3|proto.WireBytes, 15,
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 11,
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_DOUBLE),
-		tagScalarDouble<<3|proto.WireFixed64, 0, 0, 0, 0, 0, 0, 0, 0)
-	binary.LittleEndian.PutUint64(p[len(p)-8:], math.Float64bits(f))
-	return p
+		tagScalarDouble<<3|proto.WireFixed64, byte(x), byte(x>>8), byte(x>>16), byte(x>>24), byte(x>>32),
+		byte(x>>40), byte(x>>48), byte(x>>56))
 }
 
 // appendAnyFloat32 appends an Any protobuf representing a float32 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyFloat32(p []byte, tag uint8, f float32) []byte {
-	p = append(p, tag<<3|proto.WireBytes, 11,
+	x := math.Float32bits(f)
+	return append(p, tag<<3|proto.WireBytes, 11,
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 7,
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_FLOAT),
-		tagScalarFloat<<3|proto.WireFixed32, 0, 0, 0, 0)
-	binary.LittleEndian.PutUint32(p[len(p)-4:], math.Float32bits(f))
-	return p
+		tagScalarFloat<<3|proto.WireFixed32, byte(x), byte(x>>8), byte(x>>16), byte(x>>24))
 }
 
 // appendAnyBool appends an Any protobuf representing a bool value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyBool(p []byte, tag uint8, b bool) []byte {
-	p = append(p, tag<<3|proto.WireBytes, 8,
+	return append(p, tag<<3|proto.WireBytes, 8,
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 4,
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_BOOL),
-		tagScalarBool<<3|proto.WireVarint, 0)
-	if b {
-		p[len(p)-1] = 1
-	}
-	return p
+		tagScalarBool<<3|proto.WireVarint, proto.EncodeBool(b))
 }
 
 // appendAnyNull appends an Any protobuf representing a NULL/nil value

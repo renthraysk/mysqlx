@@ -142,11 +142,10 @@ func NewDeallocate(buf []byte, id uint32) MsgBytes {
 	const (
 		tagDeallocateStmtID = 1
 	)
-
 	b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_PREPARE_DEALLOCATE),
 		tagDeallocateStmtID<<3|proto.WireVarint,
 		byte(id)|0x80, byte(id>>7)|0x80, byte(id>>14)|0x80, byte(id>>21)|0x80, byte(id>>28))
-	i := len(b) + proto.SizeVarint32(id) - binary.MaxVarintLen32
+	i := len(b) + proto.SizeVarint32(id) - proto.MaxVarintLen32
 	b[i-1] &= 0x7F
 	return MsgBytes(b[:i])
 }

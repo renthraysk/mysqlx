@@ -15,6 +15,18 @@ const (
 	WireFixed32    = 5
 )
 
+const (
+	MaxVarintLen32 = 5
+	MaxVarintLen64 = 10
+)
+
+func EncodeBool(b bool) byte {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 // SizeVarint64 returns the number of bytes required to store a uint64 in base128/varint encoding
 func SizeVarint64(x uint64) int {
 	return int(9*uint32(bits.Len64(x))+64) / 64
@@ -43,7 +55,7 @@ func AppendWireString(p []byte, tag uint8, value string) []byte {
 	n := SizeVarint(x)
 	p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
 		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
-	n += len(p) - binary.MaxVarintLen64
+	n += len(p) - MaxVarintLen64
 	p[n-1] &= 0x7F
 	return append(p[:n], value...)
 }
@@ -53,7 +65,7 @@ func AppendWireBytes(p []byte, tag uint8, value []byte) []byte {
 	n := SizeVarint(x)
 	p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
 		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
-	n += len(p) - binary.MaxVarintLen64
+	n += len(p) - MaxVarintLen64
 	p[n-1] &= 0x7F
 	return append(p[:n], value...)
 }
