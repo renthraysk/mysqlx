@@ -47,15 +47,6 @@ const (
 	tagOctetContentType = 2
 )
 
-const (
-	tagObjectField = 1
-)
-
-const (
-	tagObjectFieldKey   = 1
-	tagObjectFieldValue = 2
-)
-
 // appendAnyUint appends an Any protobuf representing an uint64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyUint(p []byte, tag uint8, v uint64) []byte {

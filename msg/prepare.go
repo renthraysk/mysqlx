@@ -138,14 +138,15 @@ func NewExecuteNamedArgs(buf []byte, id uint32, args []driver.NamedValue) (Msg, 
 	return e, nil
 }
 
-const (
-	tagDeallocateStmtID = 1
-)
-
 func NewDeallocate(buf []byte, id uint32) MsgBytes {
-	_, b := slice.Allocate(buf, 4+1+1+proto.SizeVarint32(id))
-	proto.PutUvarint(b[6:], uint64(id))
-	b[4] = byte(mysqlx.ClientMessages_PREPARE_DEALLOCATE)
-	b[5] = tagDeallocateStmtID<<3 | proto.WireVarint
-	return MsgBytes(b)
+	const (
+		tagDeallocateStmtID = 1
+	)
+
+	b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_PREPARE_DEALLOCATE),
+		tagDeallocateStmtID<<3|proto.WireVarint,
+		byte(id)|0x80, byte(id>>7)|0x80, byte(id>>14)|0x80, byte(id>>21)|0x80, byte(id>>28))
+	i := len(b) + proto.SizeVarint32(id) - binary.MaxVarintLen32
+	b[i-1] &= 0x7F
+	return MsgBytes(b[:i])
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
-	"github.com/renthraysk/mysqlx/slice"
 )
 
 const (
@@ -24,13 +23,8 @@ type AuthenticateStart []byte
 
 // NewAuthenticateStart marshals a AuthenticateStart protobuf message
 func NewAuthenticateStart(buf []byte, mechName string) AuthenticateStart {
-	n := len(mechName)
-	i := proto.SizeVarint(uint(n))
-	buf, b := slice.Allocate(buf, 4+1+1+i+n)
-	proto.PutUvarint(b[6:], uint64(n))
-	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_START)
-	b[5] = tagAuthenticateStartMechName<<3 | proto.WireBytes
-	copy(b[6+i:], mechName)
+	b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_START))
+	b = proto.AppendWireString(b, tagAuthenticateStartMechName, mechName)
 	return AuthenticateStart(b)
 }
 
@@ -43,23 +37,12 @@ func (a AuthenticateStart) WriteTo(w io.Writer) (int64, error) {
 
 // SetAuthData sets the optional authentication data, only used for plain authentication mechanism.
 func (a *AuthenticateStart) SetAuthData(authData []byte) {
-	n := len(authData)
-	i := proto.SizeVarint(uint(n))
-	b := *a
-	*a, b = slice.ForAppend(b, 1+i+n)
-	proto.PutUvarint(b[1:], uint64(n))
-	b[0] = tagAuthenticateStartAuthData<<3 | proto.WireBytes
-	copy(b[1+i:], authData)
+	*a = proto.AppendWireBytes(*a, tagAuthenticateStartAuthData, authData)
 }
 
 // NewAuthenticateContinue marshals AuthenticateContinue protobuf message
 func NewAuthenticateContinue(buf []byte, authData []byte) MsgBytes {
-	n := len(authData)
-	i := proto.SizeVarint(uint(n))
-	buf, b := slice.Allocate(buf, 4+1+1+i+n)
-	proto.PutUvarint(b[6:], uint64(n))
-	b[4] = byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_CONTINUE)
-	b[5] = tagAuthenticateContinueAuthData<<3 | proto.WireBytes
-	copy(b[6+i:], authData)
+	b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_SESS_AUTHENTICATE_CONTINUE))
+	b = proto.AppendWireBytes(b, tagAuthenticateContinueAuthData, authData)
 	return MsgBytes(b)
 }
