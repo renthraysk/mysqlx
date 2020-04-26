@@ -46,7 +46,9 @@ func TestPrepare(t *testing.T) {
 		"abc",
 		[]byte{'x', 'y', 'z'},
 		JSON([]byte("{}")),
+		JSONString("{}"),
 		XML([]byte("<foo />")),
+		XMLString("<foo />"),
 		true,
 		false,
 	}
