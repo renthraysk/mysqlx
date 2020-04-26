@@ -11,6 +11,8 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+var _ Args = (*StmtExecute)(nil)
+
 func TestSerialization(t *testing.T) {
 	var out mysqlx_sql.StmtExecute
 	var b [1024]byte
@@ -30,9 +32,8 @@ func TestSerialization(t *testing.T) {
 	for name, in := range tests {
 		t.Run(name, func(t *testing.T) {
 			s := NewStmtExecute(b[:0], in.Stmt)
-			for _, v := range in.Args {
-				s.appendArgValue(v)
-			}
+			AppendArgValues(&s, in.Args...)
+
 			if err := proto.Unmarshal(s[headerSize:], &out); err != nil {
 				t.Fatalf("failed to unmarshal: %s", err)
 			}
