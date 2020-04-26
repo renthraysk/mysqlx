@@ -2,6 +2,7 @@ package mysqlx
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"encoding/binary"
 
 	"github.com/renthraysk/mysqlx/msg"
@@ -98,10 +99,11 @@ func (b *builder) WriteSessionReset(keepOpen bool) error {
 	return err
 }
 
-func (b *builder) WriteStmtExecute(stmt string, args ...interface{}) error {
-	s := msg.NewStmtExecute(b.tmp[:0], stmt)
-	msg.AppendArgValues(&s, args...)
-	_, err := s.WriteTo(b.buf)
+func (b *builder) WriteStmtExecute(stmt string, args ...driver.Value) error {
+	s, err := msg.NewStmtExecute(b.tmp[:0], stmt, args)
+	if err == nil {
+		_, err = s.WriteTo(b.buf)
+	}
 	return err
 }
 

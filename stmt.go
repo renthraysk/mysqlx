@@ -28,7 +28,7 @@ func (s *stmt) NumInput() int {
 
 // Exec forced deprecated implementation by database/sql Stmt interface
 func (s *stmt) Exec(args []driver.Value) (driver.Result, error) {
-	e, err := msg.NewExecuteArgs(s.c.buf[:0], s.id, args)
+	e, err := msg.NewExecute(s.c.buf[:0], s.id, args)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *stmt) Exec(args []driver.Value) (driver.Result, error) {
 }
 
 func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (driver.Result, error) {
-	e, err := msg.NewExecuteNamedArgs(s.c.buf[:0], s.id, args)
+	e, err := msg.NewExecuteNamed(s.c.buf[:0], s.id, args)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (s *stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (drive
 
 // Query forced deprecated implementation by database/sql Stmt interface
 func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
-	e, err := msg.NewExecuteArgs(s.c.buf[:0], s.id, args)
+	e, err := msg.NewExecute(s.c.buf[:0], s.id, args)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *stmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func (s *stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (driver.Rows, error) {
-	q, err := msg.NewExecuteNamedArgs(s.c.buf[:0], s.id, args)
+	q, err := msg.NewExecuteNamed(s.c.buf[:0], s.id, args)
 	if err != nil {
 		return nil, err
 	}

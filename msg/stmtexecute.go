@@ -19,10 +19,11 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 )
+
+const xnamespace = "mysqlx"
 
 const (
 	tagStmtExecuteStmt            = 1
@@ -35,10 +36,23 @@ const (
 type StmtExecute []byte
 
 // NewStmtExecute creates a new StmtExecute which attempts to use the unused capacity of buf.
-func NewStmtExecute(buf []byte, stmt string) StmtExecute {
+func NewStmtExecute(buf []byte, stmt string, args []driver.Value) (StmtExecute, error) {
+	var err error
+
 	b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_SQL_STMT_EXECUTE))
 	b = proto.AppendWireString(b, tagStmtExecuteStmt, stmt)
-	return StmtExecute(b)
+	b, err = appendAnyValues(b, tagStmtExecuteArgs, args)
+	return StmtExecute(b), err
+}
+
+// NewStmtExecute creates a new StmtExecute which attempts to use the unused capacity of buf.
+func NewStmtExecuteNamed(buf []byte, stmt string, args []driver.NamedValue) (StmtExecute, error) {
+	var err error
+
+	b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_SQL_STMT_EXECUTE))
+	b = proto.AppendWireString(b, tagStmtExecuteStmt, stmt)
+	b, err = appendAnyNamedValues(b, tagStmtExecuteArgs, args)
+	return StmtExecute(b), err
 }
 
 // WriteTo writes protobuf marshalled data to w, implementation of Msg interface
@@ -53,66 +67,8 @@ func (s *StmtExecute) SetNamespace(namespace string) {
 	*s = proto.AppendWireString(*s, tagStmtExecuteNamespace, namespace)
 }
 
-// AppendArgUint appends an uint64 parameter
-func (s *StmtExecute) AppendArgUint(v uint64) {
-	*s = appendAnyUint(*s, tagStmtExecuteArgs, v)
-}
-
-// AppendArgInt appends an int64 parameter
-func (s *StmtExecute) AppendArgInt(v int64) {
-	*s = appendAnyInt(*s, tagStmtExecuteArgs, v)
-}
-
-// AppendArgBytes appends an binary parameter
-func (s *StmtExecute) AppendArgBytes(bytes []byte, contentType ContentType) {
-	*s = appendAnyBytes(*s, tagStmtExecuteArgs, bytes, contentType)
-}
-
-// AppendArgBytesString appends a content typed XML/JSON/Geometry parameter
-func (s *StmtExecute) AppendArgBytesString(str string, contentType ContentType) {
-	*s = appendAnyBytesString(*s, tagStmtExecuteArgs, str, contentType)
-}
-
-// AppendArgString appends a string parameter
-func (s *StmtExecute) AppendArgString(str string, collation collation.Collation) {
-	*s = appendAnyString(*s, tagStmtExecuteArgs, str, collation)
-}
-
-// AppendArgFloat64 appends a float64 parameter
-func (s *StmtExecute) AppendArgFloat64(f float64) {
-	*s = appendAnyFloat64(*s, tagStmtExecuteArgs, f)
-}
-
-// AppendArgFloat32 appends a float32 parameter
-func (s *StmtExecute) AppendArgFloat32(f float32) {
-	*s = appendAnyFloat32(*s, tagStmtExecuteArgs, f)
-}
-
-// AppendArgBool appends a boolean parameter
-func (s *StmtExecute) AppendArgBool(b bool) {
-	*s = appendAnyBool(*s, tagStmtExecuteArgs, b)
-}
-
-// AppendArgNull appends a NULL parameter
-func (s *StmtExecute) AppendArgNull() {
-	*s = appendAnyNull(*s, tagStmtExecuteArgs)
-}
-
-// StmtValues serialises a SQL statement and arguments into a Msg for sending to MySQL.
-func StmtValues(buf []byte, stmt string, args []driver.Value) (Msg, error) {
-	s := NewStmtExecute(buf, stmt)
-	if err := appendArgValues(&s, args); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// StmtNamedValues serialises a SQL statement and named arguments into a Msg for sending to MySQL.
-// Named arguments are not supported by MySQL, and will result in a error.
-func StmtNamedValues(buf []byte, stmt string, args []driver.NamedValue) (Msg, error) {
-	s := NewStmtExecute(buf, stmt)
-	if err := appendArgNamedValues(&s, args); err != nil {
-		return nil, err
-	}
-	return s, nil
+func Ping(buf []byte) Msg {
+	p, _ := NewStmtExecute(buf, "ping", nil)
+	p.SetNamespace(xnamespace)
+	return p
 }

@@ -1,7 +1,13 @@
 package msg
 
 import (
+	"database/sql/driver"
+	"errors"
+	"fmt"
 	"math"
+	"reflect"
+	"strconv"
+	"time"
 
 	"github.com/renthraysk/mysqlx/collation"
 	"github.com/renthraysk/mysqlx/proto"
@@ -46,6 +52,10 @@ const (
 	tagOctetContentType = 2
 )
 
+type AnyAppender interface {
+	AppendAny(p []byte, tag uint8) ([]byte, error)
+}
+
 // appendAnyUint appends an Any protobuf representing an uint64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyUint(p []byte, tag uint8, x uint64) []byte {
@@ -79,13 +89,13 @@ func appendAnyInt(p []byte, tag uint8, v int64) []byte {
 
 // appendAnyBytes appends an Any protobuf representing an octet ([]byte) value
 // tag refers to the protobuf tag index, and is assumed less to be than 16
-func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType ContentType) []byte {
+func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType contentType) []byte {
 	if bytes == nil {
 		return appendAnyNull(p, tag)
 	}
 	n := len(bytes)
 	n0 := 1 + proto.SizeVarint(uint(n)) + n // Scalar_Octets size
-	if contentType != ContentTypePlain {
+	if contentType != contentTypePlain {
 		n0 += 1 + proto.SizeVarint32(uint32(contentType))
 	}
 	n1 := 3 + proto.SizeVarint(uint(n0)) + n0 // Scalar size
@@ -110,7 +120,7 @@ func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType ContentType) 
 	b = b[3+i:]
 
 	// Scalar_Octets
-	if contentType != ContentTypePlain {
+	if contentType != contentTypePlain {
 		i = proto.PutUvarint(b[1:], uint64(contentType))
 		b[0] = tagOctetContentType<<3 | proto.WireVarint
 		b = b[1+i:]
@@ -123,10 +133,10 @@ func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType ContentType) 
 
 // appendAnyBytesString appends an Any protobuf representing an octet (string) value
 // tag refers to the protobuf tag index, and is assumed less to be than 16
-func appendAnyBytesString(p []byte, tag uint8, str string, contentType ContentType) []byte {
+func appendAnyBytesString(p []byte, tag uint8, str string, contentType contentType) []byte {
 	n := len(str)
 	n0 := 1 + proto.SizeVarint(uint(n)) + n // Scalar_Octets size
-	if contentType != ContentTypePlain {
+	if contentType != contentTypePlain {
 		n0 += 1 + proto.SizeVarint32(uint32(contentType))
 	}
 	n1 := 3 + proto.SizeVarint(uint(n0)) + n0 // Scalar size
@@ -151,7 +161,7 @@ func appendAnyBytesString(p []byte, tag uint8, str string, contentType ContentTy
 	b = b[3+i:]
 
 	// Scalar_Octets
-	if contentType != ContentTypePlain {
+	if contentType != contentTypePlain {
 		i = proto.PutUvarint(b[1:], uint64(contentType))
 		b[0] = tagOctetContentType<<3 | proto.WireVarint
 		b = b[1+i:]
@@ -242,4 +252,151 @@ func appendAnyNull(p []byte, tag uint8) []byte {
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 2,
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_NULL))
+}
+
+func appendAnyTime(p []byte, tag uint8, t time.Time) []byte {
+	const fmt = "2006-01-02 15:04:05.000000000"
+	const zeroTime = "0000-00-00"
+
+	if t.IsZero() {
+		return appendAnyBytesString(p, tag, zeroTime, 0)
+	}
+
+	i := len(p)
+	p = t.AppendFormat(append(p, tag<<3|proto.WireBytes, 10,
+		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
+		tagAnyScalar<<3|proto.WireBytes, 6,
+		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_OCTETS),
+		tagScalarOctets<<3|proto.WireBytes, 2,
+		tagOctetValue<<3|proto.WireBytes, 0), fmt)
+	n := len(p) - i - 12
+	if n >= 0x80-10 {
+		panic("formatted time exceeds 117 bytes in length")
+	}
+	p[i+11] += byte(n)
+	p[i+9] += byte(n)
+	p[i+5] += byte(n)
+	p[i+1] += byte(n)
+	return p
+}
+
+const smallsString = "00010203040506070809" +
+	"10111213141516171819" +
+	"20212223242526272829" +
+	"30313233343536373839" +
+	"40414243444546474849" +
+	"50515253545556575859"
+
+func AppendDuration(p []byte, d time.Duration) []byte {
+	if d < 0 {
+		d = -d
+		p = append(p, '-')
+	}
+	i := 2 * (uint(d/time.Minute) % 60)
+	j := 2 * (uint(d/time.Second) % 60)
+	return append(strconv.AppendUint(p, uint64(d/time.Hour), 10), ':', smallsString[i], smallsString[i+1], ':', smallsString[j], smallsString[j+1])
+}
+
+func appendAnyDuration(p []byte, tag uint8, d time.Duration) []byte {
+	i := len(p)
+	p = AppendDuration(append(p, tag<<3|proto.WireBytes, 10,
+		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
+		tagAnyScalar<<3|proto.WireBytes, 6,
+		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_OCTETS),
+		tagScalarOctets<<3|proto.WireBytes, 2,
+		tagOctetValue<<3|proto.WireBytes, 0), d)
+	n := len(p) - i - 12
+	p[i+11] += byte(n)
+	p[i+9] += byte(n)
+	p[i+5] += byte(n)
+	p[i+1] += byte(n)
+	return p
+}
+
+func appendAnyValue(p []byte, tag uint8, value interface{}) ([]byte, error) {
+
+derefLoop:
+	if value == nil {
+		return appendAnyNull(p, tag), nil
+	}
+	switch v := value.(type) {
+	case string:
+		return appendAnyString(p, tag, v, 0), nil
+	case []byte:
+		return appendAnyBytes(p, tag, v, 0), nil
+	case uint:
+		return appendAnyUint(p, tag, uint64(v)), nil
+	case uint8:
+		return appendAnyUint(p, tag, uint64(v)), nil
+	case uint16:
+		return appendAnyUint(p, tag, uint64(v)), nil
+	case uint32:
+		return appendAnyUint(p, tag, uint64(v)), nil
+	case uint64:
+		return appendAnyUint(p, tag, v), nil
+	case int:
+		return appendAnyInt(p, tag, int64(v)), nil
+	case int8:
+		return appendAnyInt(p, tag, int64(v)), nil
+	case int16:
+		return appendAnyInt(p, tag, int64(v)), nil
+	case int32:
+		return appendAnyInt(p, tag, int64(v)), nil
+	case int64:
+		return appendAnyInt(p, tag, v), nil
+	case bool:
+		return appendAnyBool(p, tag, v), nil
+	case float32:
+		return appendAnyFloat32(p, tag, v), nil
+	case float64:
+		return appendAnyFloat64(p, tag, v), nil
+	case time.Time:
+		return appendAnyTime(p, tag, v), nil
+	case time.Duration:
+		return appendAnyDuration(p, tag, v), nil
+
+	default:
+		if aa, ok := v.(AnyAppender); ok {
+			return aa.AppendAny(p, tag)
+		}
+		rv := reflect.ValueOf(value)
+		switch rv.Kind() {
+		case reflect.Ptr:
+			if rv.IsNil() {
+				return appendAnyNull(p, tag), nil
+			}
+			value = rv.Elem().Interface()
+			goto derefLoop
+
+		default:
+			return p, fmt.Errorf("unsupported type %T, a %s", value, rv.Kind())
+		}
+	}
+}
+
+func appendAnyValues(p []byte, tag uint8, values []driver.Value) ([]byte, error) {
+	var err error
+
+	for i, arg := range values {
+		p, err = appendAnyValue(p, tag, arg)
+		if err != nil {
+			return p, fmt.Errorf("unable to serialize argument %d: %w", i, err)
+		}
+	}
+	return p, nil
+}
+
+func appendAnyNamedValues(p []byte, tag uint8, values []driver.NamedValue) ([]byte, error) {
+	var err error
+
+	for _, arg := range values {
+		if len(arg.Name) > 0 {
+			return p, errors.New("mysql does not support the use of named parameters")
+		}
+		p, err = appendAnyValue(p, tag, arg.Value)
+		if err != nil {
+			return p, fmt.Errorf("unable to serialize named argument %d: %w", arg.Ordinal, err)
+		}
+	}
+	return p, nil
 }

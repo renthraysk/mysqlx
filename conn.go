@@ -242,7 +242,7 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 }
 
 func (c *conn) ExecContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Result, error) {
-	s, err := msg.StmtNamedValues(c.buf[:0], stmt, args)
+	s, err := msg.NewStmtExecuteNamed(c.buf[:0], stmt, args)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func (c *conn) queryMsg(ctx context.Context, msg msg.Msg) (driver.Rows, error) {
 }
 
 func (c *conn) QueryContext(ctx context.Context, stmt string, args []driver.NamedValue) (driver.Rows, error) {
-	s, err := msg.StmtNamedValues(c.buf[:0], stmt, args)
+	s, err := msg.NewStmtExecuteNamed(c.buf[:0], stmt, args)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +407,7 @@ func (c *conn) CheckNamedValue(nv *driver.NamedValue) error {
 			return errors.New("time.Duration underflows mysql TIME (-838:59:59)")
 		}
 	default:
-		if _, ok := nv.Value.(msg.ArgAppender); ok {
+		if _, ok := nv.Value.(msg.AnyAppender); ok {
 			return nil
 		}
 		return fmt.Errorf("unsupported type %T", nv.Value)

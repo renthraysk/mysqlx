@@ -1,6 +1,7 @@
 package msg
 
 import (
+	"database/sql/driver"
 	"math"
 	"reflect"
 	"testing"
@@ -11,29 +12,28 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-var _ Args = (*StmtExecute)(nil)
-
 func TestSerialization(t *testing.T) {
 	var out mysqlx_sql.StmtExecute
 	var b [1024]byte
 
 	tests := map[string]struct {
 		Stmt string
-		Args []interface{}
+		Args []driver.Value
 	}{
-		"emptystring": {"SELECT ?", []interface{}{""}},
-		"string":      {"SELECT ?", []interface{}{"abc"}},
-		"int":         {"SELECT ?", []interface{}{int64(42)}},
-		"bool":        {"SELECT ?", []interface{}{true}},
-		"float32":     {"SELECT ?", []interface{}{float32(math.Pi)}},
-		"float64":     {"SELECT ?", []interface{}{float64(math.Pi)}},
+		"emptystring": {"SELECT ?", []driver.Value{""}},
+		"string":      {"SELECT ?", []driver.Value{"abc"}},
+		"int":         {"SELECT ?", []driver.Value{int64(42)}},
+		"bool":        {"SELECT ?", []driver.Value{true}},
+		"float32":     {"SELECT ?", []driver.Value{float32(math.Pi)}},
+		"float64":     {"SELECT ?", []driver.Value{float64(math.Pi)}},
 	}
 
 	for name, in := range tests {
 		t.Run(name, func(t *testing.T) {
-			s := NewStmtExecute(b[:0], in.Stmt)
-			AppendArgValues(&s, in.Args...)
-
+			s, err := NewStmtExecute(b[:0], in.Stmt, in.Args)
+			if err != nil {
+				t.Fatalf("NewStmtExecute failed: %v", err)
+			}
 			if err := proto.Unmarshal(s[headerSize:], &out); err != nil {
 				t.Fatalf("failed to unmarshal: %s", err)
 			}
