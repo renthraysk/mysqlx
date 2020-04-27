@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2019, Oracle and/or its affiliates. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2.0,
@@ -29,6 +29,7 @@ syntax = "proto2";
 // Handling of prepared statments
 package Mysqlx.Prepare;
 option java_package = "com.mysql.cj.x.protobuf";
+option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_prepare";
 
 import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 import "mysqlx_sql.proto";
