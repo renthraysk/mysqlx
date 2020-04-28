@@ -371,10 +371,10 @@ func (c *conn) Ping(ctx context.Context) error {
 
 func (c *conn) IsValid() bool {
 	switch c.status.Get() {
-	case statusBad:
-		return false
+	case statusOK:
+		return true
 	}
-	return true
+	return false
 }
 
 func (c *conn) ResetSession(ctx context.Context) error {
