@@ -23,6 +23,8 @@ https://dev.mysql.com/doc/refman/8.0/en/caching-sha2-pluggable-authentication.ht
     ...
     r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", mysqlx.JSON(j))
 
-    Also in string form
+Also in string form
 
     r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", mysqlx.JSONString("{}"))
+
+Similar helpers exist, mysqlx.XML, mysqlx.XMLString, mysqlx.Geometry, mysqlx.GeometryString.
