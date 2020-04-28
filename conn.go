@@ -369,6 +369,14 @@ func (c *conn) Ping(ctx context.Context) error {
 	return err
 }
 
+func (c *conn) IsValid() bool {
+	switch c.status.Get() {
+	case statusBad:
+		return false
+	}
+	return true
+}
+
 func (c *conn) ResetSession(ctx context.Context) error {
 	switch c.status.Get() {
 	case statusBad:
