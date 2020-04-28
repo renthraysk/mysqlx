@@ -379,9 +379,7 @@ func (c *conn) IsValid() bool {
 
 func (c *conn) ResetSession(ctx context.Context) error {
 	switch c.status.Get() {
-	case statusBad:
-		return driver.ErrBadConn
-	default:
+	case statusOK:
 		if !c.connector.resetKeepOpen {
 			if err := c.send(ctx, msg.SessionReset(c.buf[:0], false)); err != nil {
 				return driver.ErrBadConn
@@ -394,6 +392,8 @@ func (c *conn) ResetSession(ctx context.Context) error {
 			return driver.ErrBadConn
 		}
 		return nil
+	default:
+		return driver.ErrBadConn
 	}
 }
 
