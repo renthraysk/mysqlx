@@ -29,7 +29,7 @@ syntax = "proto2";
 // Basic CRUD operations
 package Mysqlx.Crud;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_crud";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_crud";
 
 import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 import "mysqlx_expr.proto";

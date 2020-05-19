@@ -30,7 +30,7 @@ import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 // Messages of the MySQL Package
 package Mysqlx.Sql;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_sql";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_sql";
 
 import "mysqlx_datatypes.proto";
 

@@ -130,7 +130,7 @@ import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 
 package Mysqlx.Resultset;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_resultset";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset";
 
 // resultsets are finished, OUT paramset is next
 message FetchDoneMoreOutParams {

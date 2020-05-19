@@ -29,7 +29,7 @@ syntax = "proto2";
 
 package Mysqlx;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx";
 
 import "google/protobuf/descriptor.proto"; // comment_out_if PROTOBUF_LITE
 

@@ -37,7 +37,7 @@ import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 // * may be global or relate to the current message sequence
 package Mysqlx.Notice;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_notice";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_notice";
 
 import "mysqlx_datatypes.proto";
 

@@ -29,7 +29,7 @@ syntax = "proto2";
 // Handling of Cursors
 package Mysqlx.Cursor;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_cursor";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_cursor";
 
 import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 import "mysqlx_prepare.proto";

@@ -40,7 +40,7 @@ syntax = "proto2";
 // * use as filter condition in CRUD's Find(), Update() and Delete() calls.
 package Mysqlx.Expr;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_expr";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_expr";
 
 import "mysqlx_datatypes.proto";
 

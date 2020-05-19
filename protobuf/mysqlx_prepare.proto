@@ -29,7 +29,7 @@ syntax = "proto2";
 // Handling of prepared statments
 package Mysqlx.Prepare;
 option java_package = "com.mysql.cj.x.protobuf";
-option go_package = "github.com/renthraysk/xtorm/protobuf/mysqlx_prepare";
+option go_package = "github.com/renthraysk/mysqlx/protobuf/mysqlx_prepare";
 
 import "mysqlx.proto"; // comment_out_if PROTOBUF_LITE
 import "mysqlx_sql.proto";
