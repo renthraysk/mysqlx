@@ -9,10 +9,10 @@ const (
 	ErrDecimalTooShort = errorString("decimal too short")
 )
 
-type Uint256 [4]uint64
+type uint256 [4]uint64
 
 // Add x = x+y, returning carry
-func (x *Uint256) Add(y *Uint256) uint64 {
+func (x *uint256) add(y *uint256) uint64 {
 	var c uint64
 	x[0], c = bits.Add64(x[0], y[0], 0)
 	x[1], c = bits.Add64(x[1], y[1], c)
@@ -22,7 +22,7 @@ func (x *Uint256) Add(y *Uint256) uint64 {
 }
 
 // AddUint x = x+y, returning carry
-func (x *Uint256) AddUint(y uint64) uint64 {
+func (x *uint256) addUint(y uint64) uint64 {
 	var c uint64
 	x[0], c = bits.Add64(x[0], y, 0)
 	x[1], c = bits.Add64(x[1], 0, c)
@@ -32,7 +32,7 @@ func (x *Uint256) AddUint(y uint64) uint64 {
 }
 
 // AppendBytes returns the number in big endian order appended to buf
-func (x *Uint256) AppendBytes(buf []byte) []byte {
+func (x *uint256) appendBytes(buf []byte) []byte {
 	var b [32]byte
 
 	binary.BigEndian.PutUint64(b[0:], x[3])
@@ -47,14 +47,14 @@ func (x *Uint256) AppendBytes(buf []byte) []byte {
 }
 
 // mul10add x = x*10 + y
-func mul10Add(x *Uint256, y uint64) uint64 {
+func mul10Add(x *uint256, y uint64) uint64 {
 	// @TODO Overflow checking
-	x.Add(x) // *2
+	x.add(x) // *2
 	t := *x
-	t.Add(&t) // *4
-	t.Add(&t) // *8
-	x.Add(&t) // 2 + 8
-	return x.AddUint(y)
+	t.add(&t) // *4
+	t.add(&t) // *8
+	x.add(&t) // 2 + 8
+	return x.addUint(y)
 }
 
 const (
@@ -70,7 +70,7 @@ type Decimal interface {
 type decimal []byte
 
 func (d decimal) Decompose(buf []byte) (form byte, negative bool, coefficient []byte, exponent int32) {
-	var ui256 Uint256
+	var ui256 uint256
 
 	form = 0
 	negative = false
@@ -89,7 +89,7 @@ func (d decimal) Decompose(buf []byte) (form byte, negative bool, coefficient []
 		}
 		mul10Add(&ui256, uint64(y))
 	}
-	coefficient = ui256.AppendBytes(buf[:0])
+	coefficient = ui256.appendBytes(buf[:0])
 	return
 }
 
