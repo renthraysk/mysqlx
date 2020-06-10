@@ -11,26 +11,6 @@ const (
 
 type uint256 [4]uint64
 
-// Add x = x+y, returning carry
-func (x *uint256) add(y *uint256) uint64 {
-	var c uint64
-	x[0], c = bits.Add64(x[0], y[0], 0)
-	x[1], c = bits.Add64(x[1], y[1], c)
-	x[2], c = bits.Add64(x[2], y[2], c)
-	x[3], c = bits.Add64(x[3], y[3], c)
-	return c
-}
-
-// AddUint x = x+y, returning carry
-func (x *uint256) addUint(y uint64) uint64 {
-	var c uint64
-	x[0], c = bits.Add64(x[0], y, 0)
-	x[1], c = bits.Add64(x[1], 0, c)
-	x[2], c = bits.Add64(x[2], 0, c)
-	x[3], c = bits.Add64(x[3], 0, c)
-	return c
-}
-
 // appendBytes returns the number in big endian order appended to buf
 func (x *uint256) appendBytes(buf []byte) []byte {
 	var b [32]byte
@@ -46,15 +26,19 @@ func (x *uint256) appendBytes(buf []byte) []byte {
 	return append(buf, b[i:]...)
 }
 
-// mul10add x = x*10 + y
-func mul10Add(x *uint256, y uint64) uint64 {
-	// @TODO Overflow checking
-	x.add(x) // *2
-	t := *x
-	t.add(&t) // *4
-	t.add(&t) // *8
-	x.add(&t) // 2 + 8
-	return x.addUint(y)
+// mulAdd x = x*y + z returns non zero if overflowed
+func (x *uint256) mulAdd(y uint64, z uint64) uint64 {
+	var h0, h1, h2, h3, c uint64
+
+	h0, x[0] = bits.Mul64(x[0], y)
+	x[0], c = bits.Add64(x[0], z, 0)
+	h1, x[1] = bits.Mul64(x[1], y)
+	x[1], c = bits.Add64(x[1], h0, c)
+	h2, x[2] = bits.Mul64(x[2], y)
+	x[2], c = bits.Add64(x[2], h1, c)
+	h3, x[3] = bits.Mul64(x[3], y)
+	x[3], c = bits.Add64(x[3], h2, c)
+	return h3 | c
 }
 
 const (
@@ -82,12 +66,12 @@ func (d decimal) Decompose(buf []byte) (form byte, negative bool, coefficient []
 			negative = x == 0xB || x == 0xD
 			break
 		}
-		mul10Add(&ui256, uint64(x))
+		ui256.mulAdd(10, uint64(x))
 		if y > 9 {
 			negative = y == 0xB || y == 0xD
 			break
 		}
-		mul10Add(&ui256, uint64(y))
+		ui256.mulAdd(10, uint64(y))
 	}
 	coefficient = ui256.appendBytes(buf[:0])
 	return
