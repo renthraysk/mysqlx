@@ -31,7 +31,7 @@ func (x *uint256) addUint(y uint64) uint64 {
 	return c
 }
 
-// AppendBytes returns the number in big endian order appended to buf
+// appendBytes returns the number in big endian order appended to buf
 func (x *uint256) appendBytes(buf []byte) []byte {
 	var b [32]byte
 
