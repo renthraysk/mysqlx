@@ -31,12 +31,12 @@ func (x *uint256) mulAdd(y uint64, z uint64) uint64 {
 	var h0, h1, h2, h3, c uint64
 
 	h0, x[0] = bits.Mul64(x[0], y)
-	x[0], c = bits.Add64(x[0], z, 0)
 	h1, x[1] = bits.Mul64(x[1], y)
-	x[1], c = bits.Add64(x[1], h0, c)
 	h2, x[2] = bits.Mul64(x[2], y)
-	x[2], c = bits.Add64(x[2], h1, c)
 	h3, x[3] = bits.Mul64(x[3], y)
+	x[0], c = bits.Add64(x[0], z, 0)
+	x[1], c = bits.Add64(x[1], h0, c)
+	x[2], c = bits.Add64(x[2], h1, c)
 	x[3], c = bits.Add64(x[3], h2, c)
 	return h3 | c
 }
