@@ -20,7 +20,9 @@ func TestDecimalMulAdd(t *testing.T) {
 	tests := []struct {
 		x, y, z uint64
 	}{
+		{0, 10, 1},
 		{1, 10, 1},
+		{10, 10, 11},
 		{math.MaxUint64, math.MaxUint64, 1},
 		{math.MaxUint64, math.MaxUint64, math.MaxUint64},
 	}
