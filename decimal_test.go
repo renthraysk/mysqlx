@@ -1,7 +1,6 @@
 package mysqlx
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"testing"
@@ -38,8 +37,6 @@ func TestDecimalMulAdd(t *testing.T) {
 
 		if a, b := y.String(), toBig(&x).String(); a != b {
 			t.Fatalf("failed expected %s, got %s\n", a, b)
-		} else {
-			fmt.Printf("%s %s\n", a, b)
 		}
 	}
 }
