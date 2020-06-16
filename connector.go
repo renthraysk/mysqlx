@@ -135,23 +135,25 @@ func WithBufferSize(size int) Option {
 }
 
 func WithDefaultConnectAttrs() Option {
-	return func(cnn *Connector) error {
-		if cnn.connectAttrs == nil {
-			cnn.connectAttrs = make(map[string]string, 5)
-		}
-		cnn.connectAttrs["_client_name"] = "mysqlx"
-		cnn.connectAttrs["_pid"] = strconv.Itoa(os.Getpid())
-		cnn.connectAttrs["_platform"] = runtime.GOARCH
-		cnn.connectAttrs["_os"] = runtime.GOOS
-		cnn.connectAttrs["program_name"] = os.Args[0]
-		return nil
+	attrs := map[string]string{
+		"_client_name": "mysqlx",
+		"_pid":         strconv.Itoa(os.Getpid()),
+		"_platform":    runtime.GOARCH,
+		"_os":          runtime.GOOS,
+		"program_name": os.Args[0],
 	}
+	return WithConnectAttrs(attrs)
 }
 
 // WithConnectAttrs sets the connection attributes that will be set on connect
 func WithConnectAttrs(attrs map[string]string) Option {
 	return func(cnn *Connector) error {
-		cnn.connectAttrs = attrs
+		if cnn.connectAttrs == nil {
+			cnn.connectAttrs = make(map[string]string, len(attrs))
+		}
+		for k, v := range attrs {
+			cnn.connectAttrs[k] = v
+		}
 		return nil
 	}
 }
