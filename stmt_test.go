@@ -21,21 +21,6 @@ func TestPrepare(t *testing.T) {
 	db := sql.OpenDB(connector)
 	defer db.Close()
 
-	// Grab single connection
-	cnn, err := db.Conn(ctx)
-	require.NoError(t, err)
-
-	stmt, err := cnn.PrepareContext(ctx, SQLTEXT)
-	require.NoError(t, err)
-
-	// Make sure our SQL didn't get mangled...
-	rows, err := cnn.QueryContext(ctx, "SELECT 1 from performance_schema.prepared_statements_instances WHERE SQL_TEXT = ?", SQLTEXT)
-	require.NoError(t, err)
-
-	require.True(t, rows.Next())
-	require.False(t, rows.Next())
-	require.NoError(t, rows.Close())
-
 	values := []interface{}{
 		nil,
 		0,
@@ -53,8 +38,14 @@ func TestPrepare(t *testing.T) {
 		false,
 	}
 
+	// Grab single connection
+	cnn, err := db.Conn(ctx)
+	require.NoError(t, err)
+
 	for _, v := range values {
 		t.Run(fmt.Sprintf("test.%T(%v)", v, v), func(t *testing.T) {
+			stmt, err := cnn.PrepareContext(ctx, SQLTEXT)
+			require.NoError(t, err)
 
 			var r interface{}
 
@@ -74,10 +65,10 @@ func TestPrepare(t *testing.T) {
 				require.EqualValues(t, v, r)
 			}
 			require.NoError(t, rows.Close())
+			require.NoError(t, stmt.Close())
 		})
 	}
 
-	require.NoError(t, stmt.Close())
 	require.NoError(t, cnn.Close())
 	require.NoError(t, db.Close())
 }
