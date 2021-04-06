@@ -9,9 +9,8 @@ import (
 	"math"
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
-
 	"github.com/renthraysk/mysqlx/collation"
+	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
 )
 

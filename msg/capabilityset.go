@@ -4,8 +4,7 @@ import (
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_connection"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
-
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // CapabilitySetTLSEnable returns a Msg to send to mysql to enable TLS
@@ -28,11 +27,11 @@ func CapabilitySetTLS(buf []byte, enable bool) (MsgBytes, error) {
 	}
 
 	buf[4] = byte(mysqlx.ClientMessages_CON_CAPABILITIES_SET)
-	b := proto.NewBuffer(buf[:5])
-	if err := b.Marshal(cs); err != nil {
+	b, err := proto.MarshalOptions{}.MarshalAppend(buf[:5], cs)
+	if err != nil {
 		return nil, err
 	}
-	return MsgBytes(b.Bytes()), nil
+	return MsgBytes(b), nil
 }
 
 func CapabilitySetSessionConnectAttrs(buf []byte, attrs map[string]string) (MsgBytes, error) {
@@ -74,9 +73,9 @@ func CapabilitySetSessionConnectAttrs(buf []byte, attrs map[string]string) (MsgB
 	}
 
 	buf[4] = byte(mysqlx.ClientMessages_CON_CAPABILITIES_SET)
-	b := proto.NewBuffer(buf[:5])
-	if err := b.Marshal(cs); err != nil {
+	b, err := proto.MarshalOptions{}.MarshalAppend(buf[:5], cs)
+	if err != nil {
 		return nil, err
 	}
-	return MsgBytes(b.Bytes()), nil
+	return MsgBytes(b), nil
 }

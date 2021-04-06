@@ -8,11 +8,11 @@ import (
 // Constants that identify the encoding of a value on the wire.
 const (
 	WireVarint     = 0
+	WireFixed32    = 5
 	WireFixed64    = 1
 	WireBytes      = 2
 	WireStartGroup = 3
 	WireEndGroup   = 4
-	WireFixed32    = 5
 )
 
 const (

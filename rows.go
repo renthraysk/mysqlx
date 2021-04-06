@@ -9,10 +9,9 @@ import (
 	"math"
 	"reflect"
 
+	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_resultset"
-
-	"github.com/golang/protobuf/proto"
 )
 
 const (

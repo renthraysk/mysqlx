@@ -21,8 +21,7 @@ import (
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_notice"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_session"
-
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 type connStatus uint32

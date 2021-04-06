@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
+	"google.golang.org/protobuf/proto"
 )
 
 // Severity level of an Error

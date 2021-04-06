@@ -8,8 +8,7 @@ import (
 
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_datatypes"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx_sql"
-
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestSerialization(t *testing.T) {
@@ -34,7 +33,8 @@ func TestSerialization(t *testing.T) {
 			if err != nil {
 				t.Fatalf("NewStmtExecute failed: %v", err)
 			}
-			if err := proto.Unmarshal(s[headerSize:], &out); err != nil {
+			err = proto.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(s[headerSize:], &out)
+			if err != nil {
 				t.Fatalf("failed to unmarshal: %s", err)
 			}
 			if string(out.Stmt) != in.Stmt {
