@@ -288,7 +288,7 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 		b.WriteExpectField(ExpectFieldKeepOpen)
 		b.WriteExpectClose()
 
-		cnn.resetKeepOpen = true
+		cnn.resetKeepOpen = false
 		if err = conn.sendN(ctx, b.Bytes()); err != nil {
 			var e *errs.Errors
 			if !errors.As(err, &e) {
@@ -299,8 +299,9 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 				return
 			}
 			// No session-reset(keep-open) support.
-			cnn.resetKeepOpen = false
 			err = nil
+		} else {
+			cnn.resetKeepOpen = true
 		}
 
 		// Determine if have anything to run per reset
