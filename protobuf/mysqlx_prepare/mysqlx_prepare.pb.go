@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -138,7 +138,7 @@ type Prepare struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* client side assigned statement id, which is going to identify
+	//* client-side assigned statement ID, which is going to identify
 	//the result of preparation
 	StmtId *uint32 `protobuf:"varint,1,req,name=stmt_id,json=stmtId" json:"stmt_id,omitempty"`
 	//* defines one of following messages to be prepared:
@@ -193,7 +193,7 @@ func (x *Prepare) GetStmt() *Prepare_OneOfMessage {
 }
 
 //*
-//Execute already prepared statement
+//Execute already-prepared statement
 //
 //@startuml
 //
@@ -211,7 +211,7 @@ type Execute struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* client side assigned statement id, must be already prepared
+	//* client-side assigned statement ID, must be already prepared
 	StmtId *uint32 `protobuf:"varint,1,req,name=stmt_id,json=stmtId" json:"stmt_id,omitempty"`
 	//* Arguments to bind to the prepared statement
 	Args []*mysqlx_datatypes.Any `protobuf:"bytes,2,rep,name=args" json:"args,omitempty"`
@@ -279,7 +279,7 @@ func (x *Execute) GetCompactMetadata() bool {
 }
 
 //*
-//Deallocate already prepared statement
+//Deallocate already-prepared statement
 //
 //@startuml
 //client -> server: Deallocate
@@ -296,7 +296,7 @@ type Deallocate struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* client side assigned statement id, must be already prepared
+	//* client-side assigned statement ID, must be already prepared
 	StmtId *uint32 `protobuf:"varint,1,req,name=stmt_id,json=stmtId" json:"stmt_id,omitempty"`
 }
 

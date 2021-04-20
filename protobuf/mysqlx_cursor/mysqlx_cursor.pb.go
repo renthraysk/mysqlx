@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -123,12 +123,12 @@ type Open struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* client side assigned cursor id, the ID is going to represent
-	//new cursor and assigned to it statement
+	//* client-side assigned cursor ID; the ID is going to represent
+	//the new cursor and assigned to it the statement
 	CursorId *uint32 `protobuf:"varint,1,req,name=cursor_id,json=cursorId" json:"cursor_id,omitempty"`
-	//* statement which resultset is going to be iterated through the cursor
+	//* statement for which the resultset is going to be iterated through by the cursor
 	Stmt *Open_OneOfMessage `protobuf:"bytes,4,req,name=stmt" json:"stmt,omitempty"`
-	//* number of rows which should be retrieved from sequential cursor
+	//* number of rows that should be retrieved from sequential cursor
 	FetchRows *uint64 `protobuf:"varint,5,opt,name=fetch_rows,json=fetchRows" json:"fetch_rows,omitempty"`
 }
 
@@ -202,9 +202,9 @@ type Fetch struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* client side assigned cursor id, must be already open
+	//* client-side assigned cursor ID; must be already open
 	CursorId *uint32 `protobuf:"varint,1,req,name=cursor_id,json=cursorId" json:"cursor_id,omitempty"`
-	//* number of rows which should be retrieved from sequential cursor
+	//* number of rows that should be retrieved from sequential cursor
 	FetchRows *uint64 `protobuf:"varint,5,opt,name=fetch_rows,json=fetchRows" json:"fetch_rows,omitempty"`
 }
 
@@ -272,7 +272,7 @@ type Close struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* client side assigned cursor id, must be allocated/open
+	//* client-side assigned cursor ID; must be allocated/open
 	CursorId *uint32 `protobuf:"varint,1,req,name=cursor_id,json=cursorId" json:"cursor_id,omitempty"`
 }
 

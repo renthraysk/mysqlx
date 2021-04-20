@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -155,7 +155,7 @@ const (
 //|BYTES | 0x0003 | XML (text encoding)     |
 //
 //@note
-//this list isn't comprehensive. As guideline: the field's value is expected
+//this list isn't comprehensive. As a guideline: the field's value is expected
 //to pass a validator check on client and server if this field is set.
 //If the server adds more internal datatypes that rely on BLOB storage
 //like image manipulation, seeking into complex types in BLOBs, ... more
@@ -486,7 +486,7 @@ func (*FetchDone) Descriptor() ([]byte, []int) {
 }
 
 //*
-//Cursor is opened still the execution of PrepFetch or PrepExecute ended
+//Cursor is opened; still, the execution of PrepFetch or PrepExecute ended
 type FetchSuspended struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -858,7 +858,7 @@ type ColumnMetaData struct {
 
 	//* datatype of the field in a row
 	Type *ColumnMetaData_FieldType `protobuf:"varint,1,req,name=type,enum=Mysqlx.Resultset.ColumnMetaData_FieldType" json:"type,omitempty"`
-	//* ame of the column
+	//* name of the column
 	Name []byte `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
 	//* name of the column before an alias was applied
 	OriginalName []byte `protobuf:"bytes,3,opt,name=original_name,json=originalName" json:"original_name,omitempty"`
@@ -870,7 +870,7 @@ type ColumnMetaData struct {
 	Schema []byte `protobuf:"bytes,6,opt,name=schema" json:"schema,omitempty"`
 	//* catalog the schema originates from
 	//@note
-	//As there is current no support for catalogs in MySQL,
+	//As there is currently no support for catalogs in MySQL,
 	//don't expect this field to be set. In the MySQL C/S
 	//protocol the field had the value ``def`` all the time
 	Catalog   []byte  `protobuf:"bytes,7,opt,name=catalog" json:"catalog,omitempty"`
@@ -906,7 +906,7 @@ type ColumnMetaData struct {
 	//| BYTES  | 0x0002 | JSON (text encoding)    |
 	//| BYTES  | 0x0003 | XML (text encoding)     |
 	//@note
-	//This list isn't comprehensive. As guideline: the field's
+	//This list isn't comprehensive. As a guideline: the field's
 	//value is expected to pass a validator check on client
 	//and server if this field is set. If the server adds more
 	//internal data types that rely on BLOB storage like image

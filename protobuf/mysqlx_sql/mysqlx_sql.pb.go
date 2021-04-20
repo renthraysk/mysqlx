@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -148,7 +148,7 @@ func (x *StmtExecute) GetCompactMetadata() bool {
 }
 
 //*
-//Statement executed successful
+//Statement executed successfully
 type StmtExecuteOk struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

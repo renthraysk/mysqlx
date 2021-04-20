@@ -202,7 +202,7 @@ func (*CapabilitiesGet) Descriptor() ([]byte, []int) {
 
 //*
 //Set connection capabilities atomically.
-//Only provided values are changed, other values are left
+//Only provided values are changed; other values are left
 //unchanged. If any of the changes fails, all changes are
 //discarded.
 //

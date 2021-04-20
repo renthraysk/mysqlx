@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -118,7 +118,7 @@ const (
 	Open_Condition_EXPECT_NO_ERROR Open_Condition_Key = 1
 	//* Check if X Protocol field exists
 	Open_Condition_EXPECT_FIELD_EXIST Open_Condition_Key = 2
-	//* Check if X Protocol support document _id generation
+	//* Check if X Protocol supports document _id generation
 	Open_Condition_EXPECT_DOCID_GENERATED Open_Condition_Key = 3
 )
 

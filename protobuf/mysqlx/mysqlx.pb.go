@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -567,11 +567,11 @@ type Error struct {
 
 	//* severity of the error message
 	Severity *Error_Severity `protobuf:"varint,1,opt,name=severity,enum=Mysqlx.Error_Severity,def=0" json:"severity,omitempty"`
-	//* error-code
+	//* error code
 	Code *uint32 `protobuf:"varint,2,req,name=code" json:"code,omitempty"`
 	//* SQL state
 	SqlState *string `protobuf:"bytes,4,req,name=sql_state,json=sqlState" json:"sql_state,omitempty"`
-	//* human readable error message
+	//* human-readable error message
 	Msg *string `protobuf:"bytes,3,req,name=msg" json:"msg,omitempty"`
 }
 

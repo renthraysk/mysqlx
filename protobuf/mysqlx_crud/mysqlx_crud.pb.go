@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
+// Copyright (c) 2015, 2021, Oracle and/or its affiliates.
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License, version 2.0,
@@ -188,14 +188,14 @@ func (ViewAlgorithm) EnumDescriptor() ([]byte, []int) {
 
 //*
 //ViewSqlSecurity defines the security context in which the view is going to be
-//executed, this means that VIEW can be executed with current user permissions or
-//with permissions of the uses who defined the VIEW
+//executed; this means that VIEW can be executed with current user permissions or
+//with permissions of the user who defined the VIEW
 type ViewSqlSecurity int32
 
 const (
 	//* use current user permissions
 	ViewSqlSecurity_INVOKER ViewSqlSecurity = 1
-	//* use permissions of the uses who defined the VIEW
+	//* use permissions of the user who defined the VIEW
 	ViewSqlSecurity_DEFINER ViewSqlSecurity = 2
 )
 
@@ -634,7 +634,7 @@ type Projection struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//* the expression identifying an element from the source data
+	//* the expression identifying an element from the source data,
 	//which can include a column identifier or any expression
 	Source *mysqlx_expr.Expr `protobuf:"bytes,1,req,name=source" json:"source,omitempty"`
 	//* optional alias. Required for DOCUMENTs (clients may use
@@ -801,7 +801,7 @@ func (x *Limit) GetOffset() uint64 {
 }
 
 //*
-//LimitExpr in comparison to Limit, is able to specify that row_count and
+//LimitExpr, in comparison to Limit, is able to specify that row_count and
 //offset are placeholders.
 //This message support expressions of following types Expr/literal/UINT,
 //Expr/PLACEHOLDER.
