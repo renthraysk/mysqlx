@@ -65,7 +65,7 @@ func appendAnyUint(p []byte, tag uint8, x uint64) []byte {
 		tagAnyScalar<<3|proto.WireBytes, 3+byte(n),
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_UINT),
 		tagScalarUint<<3|proto.WireVarint, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
-		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56), 1)
 	n += len(p) - proto.MaxVarintLen64
 	p[n-1] &= 0x7F
 	return p[:n]
@@ -81,7 +81,7 @@ func appendAnyInt(p []byte, tag uint8, v int64) []byte {
 		tagAnyScalar<<3|proto.WireBytes, 3+byte(n),
 		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_SINT),
 		tagScalarSint<<3|proto.WireVarint, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
-		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+		byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56), 1)
 	n += len(p) - proto.MaxVarintLen64
 	p[n-1] &= 0x7F
 	return p[:n]
@@ -292,9 +292,10 @@ func AppendDuration(p []byte, d time.Duration) []byte {
 		d = -d
 		p = append(p, '-')
 	}
+	p = strconv.AppendUint(p, uint64(d/time.Hour), 10)
 	i := 2 * (uint(d/time.Minute) % 60)
 	j := 2 * (uint(d/time.Second) % 60)
-	return append(strconv.AppendUint(p, uint64(d/time.Hour), 10), ':', smallsString[i], smallsString[i+1], ':', smallsString[j], smallsString[j+1])
+	return append(p, ':', smallsString[i], smallsString[i+1], ':', smallsString[j], smallsString[j+1])
 }
 
 func appendAnyDuration(p []byte, tag uint8, d time.Duration) []byte {

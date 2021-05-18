@@ -51,28 +51,32 @@ func PutUvarint(b []byte, x uint64) int {
 	return binary.PutUvarint(b, x)
 }
 
+// AppendWireString appends a protobuf wire bytes record to p
+// tag is assumed to be > 0 and < 16.
 func AppendWireString(p []byte, tag uint8, value string) []byte {
 	x := uint(len(value))
-	n := len(p) + 1 + SizeVarint(x)
+	n := len(p) + SizeVarint(x)
 	if bits.UintSize == 32 {
 		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28))
 	} else {
 		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
-			byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+			byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56), 1)
 	}
-	p[n-1] &= 0x7F
-	return append(p[:n], value...)
+	p[n] &= 0x7F
+	return append(p[:n+1], value...)
 }
 
+// AppendWireBytes appends a protobuf wire bytes record to p
+// tag is assumed to be > 0 and < 16.
 func AppendWireBytes(p []byte, tag uint8, value []byte) []byte {
 	x := uint(len(value))
-	n := len(p) + 1 + SizeVarint(x)
+	n := len(p) + SizeVarint(x)
 	if bits.UintSize == 32 {
 		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28))
 	} else {
 		p = append(p, tag<<3|WireBytes, byte(x)|0x80, byte(x>>7)|0x80, byte(x>>14)|0x80, byte(x>>21)|0x80, byte(x>>28)|0x80,
-			byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56)|0x80, 1)
+			byte(x>>35)|0x80, byte(x>>42)|0x80, byte(x>>49)|0x80, byte(x>>56), 1)
 	}
-	p[n-1] &= 0x7F
-	return append(p[:n], value...)
+	p[n] &= 0x7F
+	return append(p[:n+1], value...)
 }
