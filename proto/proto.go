@@ -44,10 +44,6 @@ func SizeVarint(x uint) int {
 }
 
 func PutUvarint(b []byte, x uint64) int {
-	if x < 0x80 {
-		b[0] = byte(x)
-		return 1
-	}
 	return binary.PutUvarint(b, x)
 }
 
