@@ -287,25 +287,22 @@ const smallsString = "00010203040506070809" +
 	"40414243444546474849" +
 	"50515253545556575859"
 
-func AppendDuration(p []byte, d time.Duration) []byte {
+func appendAnyDuration(p []byte, tag uint8, d time.Duration) []byte {
+	i := len(p)
+	p = append(p, tag<<3|proto.WireBytes, 10,
+		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
+		tagAnyScalar<<3|proto.WireBytes, 6,
+		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_OCTETS),
+		tagScalarOctets<<3|proto.WireBytes, 2,
+		tagOctetValue<<3|proto.WireBytes, 0)
 	if d < 0 {
 		d = -d
 		p = append(p, '-')
 	}
 	p = strconv.AppendUint(p, uint64(d/time.Hour), 10)
-	i := 2 * (uint(d/time.Minute) % 60)
-	j := 2 * (uint(d/time.Second) % 60)
-	return append(p, ':', smallsString[i], smallsString[i+1], ':', smallsString[j], smallsString[j+1])
-}
-
-func appendAnyDuration(p []byte, tag uint8, d time.Duration) []byte {
-	i := len(p)
-	p = AppendDuration(append(p, tag<<3|proto.WireBytes, 10,
-		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
-		tagAnyScalar<<3|proto.WireBytes, 6,
-		tagScalarType<<3|proto.WireVarint, byte(mysqlx_datatypes.Scalar_V_OCTETS),
-		tagScalarOctets<<3|proto.WireBytes, 2,
-		tagOctetValue<<3|proto.WireBytes, 0), d)
+	m := 2 * (uint(d/time.Minute) % 60)
+	s := 2 * (uint(d/time.Second) % 60)
+	p = append(p, ':', smallsString[m], smallsString[m+1], ':', smallsString[s], smallsString[s+1])
 	n := len(p) - i - 12
 	p[i+11] += byte(n)
 	p[i+9] += byte(n)
