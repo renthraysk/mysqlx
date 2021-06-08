@@ -6,7 +6,6 @@ import (
 
 	"github.com/renthraysk/mysqlx/proto"
 	"github.com/renthraysk/mysqlx/protobuf/mysqlx"
-	"github.com/renthraysk/mysqlx/slice"
 )
 
 const (
@@ -29,25 +28,17 @@ func (m MsgBytes) WriteTo(w io.Writer) (int64, error) {
 
 // ConnectionClose appends the client close message to buf, and returns Msg to send to server
 func ConnectionClose(buf []byte) MsgBytes {
-	_, b := slice.Allocate(buf, headerSize)
-	b[4] = byte(mysqlx.ClientMessages_CON_CLOSE)
-	return MsgBytes(b)
+	return MsgBytes(append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_CON_CLOSE)))
 }
 
 // SessionReset appends the client session reset message to buf, and returns Msg to send to server
 func SessionReset(buf []byte, keepOpen bool) MsgBytes {
-
 	const tagSessionResetKeepOpen = 1
 
 	if keepOpen {
-		_, b := slice.Allocate(buf, headerSize+2)
-		b[4] = byte(mysqlx.ClientMessages_SESS_RESET)
-		b[5] = tagSessionResetKeepOpen<<3 | proto.WireVarint
-		b[6] = 1
+		b := append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_SESS_RESET),
+			tagSessionResetKeepOpen<<3|proto.WireVarint, 1)
 		return MsgBytes(b)
 	}
-
-	_, b := slice.Allocate(buf, headerSize)
-	b[4] = byte(mysqlx.ClientMessages_SESS_RESET)
-	return MsgBytes(b)
+	return MsgBytes(append(buf[len(buf):], 0, 0, 0, 0, byte(mysqlx.ClientMessages_SESS_RESET)))
 }
