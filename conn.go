@@ -430,6 +430,7 @@ func (c *conn) authenticate(ctx context.Context) error {
 	if e, ok := errs.IsMySQL(err); !ok || e.Code != errs.ErAccessDeniedError {
 		return err
 	}
+	// Error was Access Denied
 	switch c.netConn.(type) {
 	case *tls.Conn, *net.UnixConn:
 		// Connected securely, so can attempt to authenticate with PLAIN,
