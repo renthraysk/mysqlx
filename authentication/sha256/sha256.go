@@ -22,7 +22,7 @@ func (Auth) Start(buf []byte, credentials authentication.Credentials) msg.MsgByt
 
 func (Auth) Continue(buf []byte, credentials authentication.Credentials, authData []byte) msg.MsgBytes {
 
-	n := len(credentials.Database()) + 1 + len(credentials.UserName()) + 1 + 2*sha256.Size
+	n := len(credentials.Database()) + 1 + len(credentials.UserName()) + 1 + hex.EncodedLen(sha256.Size)
 
 	// Slice off some bytes for computing the authentication data
 	buf, ad := slice.Allocate(buf, n)
