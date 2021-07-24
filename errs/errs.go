@@ -28,10 +28,21 @@ func (s Severity) String() string {
 	return "Unknown"
 }
 
+type ErrCode uint32
+
+func (e ErrCode) Is(err error) bool {
+	var er *Error
+
+	if errors.As(err, &er) {
+		return e == er.Code
+	}
+	return false
+}
+
 // Error represents a mysqlx Error
 type Error struct {
 	Severity Severity
-	Code     uint32
+	Code     ErrCode
 	SQLState string
 	Msg      string
 }
@@ -48,16 +59,16 @@ func New(b []byte) error {
 	}
 	return &Error{
 		Severity: Severity(e.GetSeverity()),
-		Code:     e.GetCode(),
+		Code:     ErrCode(e.GetCode()),
 		SQLState: e.GetSqlState(),
 		Msg:      e.GetMsg(),
 	}
 }
 
-func IsMySQL(err error) (*Error, bool) {
+func IsFatal(err error) bool {
 	var e *Error
 	ok := errors.As(err, &e)
-	return e, ok
+	return ok && e.Severity == SeverityFatal
 }
 
 type Errors map[int]error

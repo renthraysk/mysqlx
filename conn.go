@@ -427,9 +427,10 @@ func (c *conn) authenticate(ctx context.Context) error {
 	if err == nil {
 		return nil
 	}
-	if e, ok := errs.IsMySQL(err); !ok || e.Code != errs.ErAccessDeniedError {
+	if !errs.ErAccessDeniedError.Is(err) {
 		return err
 	}
+
 	// Error was Access Denied
 	switch c.netConn.(type) {
 	case *tls.Conn, *net.UnixConn:
@@ -507,7 +508,8 @@ func (c *conn) authenticate2(ctx context.Context, starter authentication.Starter
 
 func (c *conn) handleError(b []byte) error {
 	err := errs.New(b)
-	if e, ok := errs.IsMySQL(err); ok && e.Severity == errs.SeverityFatal {
+
+	if errs.IsFatal(err) {
 		c.status.Set(statusBad)
 	}
 	return err

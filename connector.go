@@ -294,8 +294,8 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 			if !errors.As(err, &e) {
 				return
 			}
-			var e0 *errs.Error
-			if !errors.As((*e)[0], &e0) || e0.Code != errs.ErXExpectFieldExistsFailed {
+
+			if !errs.ErXExpectFieldExistsFailed.Is((*e)[0]) {
 				return
 			}
 			// No session-reset(keep-open) support.
