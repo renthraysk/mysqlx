@@ -66,12 +66,12 @@ func (d decimal) Decompose(buf []byte) (form byte, negative bool, coefficient []
 			negative = x == 0xB || x == 0xD
 			break
 		}
-		ui256.mulAdd(10, uint64(x))
 		if y > 9 {
+			ui256.mulAdd(10, uint64(x))
 			negative = y == 0xB || y == 0xD
 			break
 		}
-		ui256.mulAdd(10, uint64(y))
+		ui256.mulAdd(100, uint64(10*x+y))
 	}
 	coefficient = ui256.appendBytes(buf[:0])
 	return
