@@ -83,7 +83,7 @@ type NullUint64 struct {
 	Valid bool
 }
 
-func (n *NullUint64) Scan(src interface{}) error {
+func (n *NullUint64) Scan(src any) error {
 	if src == nil {
 		n.Valid = false
 		return nil
@@ -126,7 +126,7 @@ var (
 	typeNullDate     = reflect.TypeOf(NullDate{})
 	typeDateTime     = reflect.TypeOf(DateTime{})
 	typeNullDateTime = reflect.TypeOf(NullDateTime{})
-	typeInterface    = reflect.TypeOf(new(interface{})).Elem()
+	typeAny          = reflect.TypeOf(new(any)).Elem()
 )
 
 func (c *ColumnType) ScanType() reflect.Type {
@@ -171,7 +171,7 @@ func (c *ColumnType) ScanType() reflect.Type {
 		case mysqlx_resultset.ColumnMetaData_ENUM:
 			return typeNullString
 		}
-		return typeInterface
+		return typeAny
 	}
 
 	switch c.fieldType {
@@ -220,7 +220,7 @@ func (c *ColumnType) ScanType() reflect.Type {
 	case mysqlx_resultset.ColumnMetaData_BIT:
 		return typeUint
 	}
-	return typeInterface
+	return typeAny
 }
 
 // IsBinary returns true if column represets a binary type

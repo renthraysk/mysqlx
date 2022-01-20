@@ -21,7 +21,7 @@ func TestPrepare(t *testing.T) {
 	db := sql.OpenDB(connector)
 	defer db.Close()
 
-	values := []interface{}{
+	values := []any{
 		nil,
 		0,
 		1,
@@ -47,7 +47,7 @@ func TestPrepare(t *testing.T) {
 			stmt, err := cnn.PrepareContext(ctx, SQLTEXT)
 			require.NoError(t, err)
 
-			var r interface{}
+			var r any
 
 			rows, err := stmt.Query(v)
 			require.NoError(t, err)

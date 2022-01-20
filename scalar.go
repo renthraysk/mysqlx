@@ -26,7 +26,7 @@ func scalarString(s *mysqlx_datatypes.Scalar) (string, collation.Collation, bool
 	return string(s.VString.Value), col, true
 }
 
-func scalarValue(s *mysqlx_datatypes.Scalar) (interface{}, bool) {
+func scalarValue(s *mysqlx_datatypes.Scalar) (any, bool) {
 	if s == nil || s.Type == nil {
 		return nil, false
 	}

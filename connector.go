@@ -168,7 +168,7 @@ func WithSQLMode(modes ...string) Option {
 	}
 }
 
-type SessionVars map[string]interface{}
+type SessionVars map[string]any
 
 func (sv SessionVars) build(b *builder) error {
 

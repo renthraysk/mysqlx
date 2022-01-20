@@ -12,18 +12,18 @@ import (
 )
 
 func TestNull(t *testing.T) {
-	var null interface{}
+	var null any
 
 	null = 42
-	query(t, "SELECT ?", []interface{}{nil}, func(rows *sql.Rows) error { return rows.Scan(&null) })
+	query(t, "SELECT ?", []any{nil}, func(rows *sql.Rows) error { return rows.Scan(&null) })
 	require.Nil(t, null)
 }
 
 func TestBool(t *testing.T) {
 	expected := []bool{false, true}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([]bool, len(expected))
 
@@ -33,9 +33,9 @@ func TestBool(t *testing.T) {
 
 func TestUint(t *testing.T) {
 	expected := []uint64{0, math.MaxUint64}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([]uint64, len(expected))
 
@@ -45,9 +45,9 @@ func TestUint(t *testing.T) {
 
 func TestInt(t *testing.T) {
 	expected := []int64{math.MinInt64, 0, math.MaxInt64}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([]int64, len(expected))
 
@@ -58,9 +58,9 @@ func TestInt(t *testing.T) {
 func TestFloat32(t *testing.T) {
 	// @TODO math.MaxFloat32 appears to get truncated on a roundtrip
 	expected := []float32{0, math.SmallestNonzeroFloat32, math.MaxFloat32 - 3.5e+32}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([]float32, len(expected))
 
@@ -71,9 +71,9 @@ func TestFloat32(t *testing.T) {
 func TestFloat64(t *testing.T) {
 	// @TODO math.MaxFloat64 appears to get truncated on a roundtrip
 	expected := []float64{0, math.SmallestNonzeroFloat64, math.MaxFloat64 - 3.1348623157e+302}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([]float64, len(expected))
 
@@ -83,9 +83,9 @@ func TestFloat64(t *testing.T) {
 
 func TestString(t *testing.T) {
 	expected := []string{"", "abc", "abcdef"}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([]string, len(expected))
 
@@ -97,7 +97,7 @@ func TestDuration(t *testing.T) {
 
 	var d []byte
 
-	query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []interface{}{839*time.Hour - time.Second}, func(rows *sql.Rows) error { return rows.Scan(&d) })
+	query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []any{839*time.Hour - time.Second}, func(rows *sql.Rows) error { return rows.Scan(&d) })
 
 	require.Equal(t, []byte("838 59 59"), d)
 }
@@ -108,16 +108,16 @@ func TestLargeBlob(t *testing.T) {
 
 	a := bytes.Repeat([]byte{'A', 'B', 'C'}, 4*1024*1024)
 
-	query(t, "SELECT ?", []interface{}{a}, func(rows *sql.Rows) error { return rows.Scan(&d) })
+	query(t, "SELECT ?", []any{a}, func(rows *sql.Rows) error { return rows.Scan(&d) })
 
 	require.Equal(t, a, d)
 }
 
 func TestBytes(t *testing.T) {
 	expected := [][]byte{{}, {0x00}, []byte("abcdef")}
-	in := make([]interface{}, len(expected))
+	in := make([]any, len(expected))
 	for i := 0; i < len(expected); i++ {
-		in[i] = interface{}(expected[i])
+		in[i] = any(expected[i])
 	}
 	out := make([][]byte, len(expected))
 

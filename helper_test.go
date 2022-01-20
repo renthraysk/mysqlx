@@ -30,7 +30,7 @@ func NewDB(tb testing.TB) *sql.DB {
 	return sql.OpenDB(NewConnector(tb))
 }
 
-func query(tb testing.TB, sql string, args []interface{}, scan func(rows *sql.Rows) error) {
+func query(tb testing.TB, sql string, args []any, scan func(rows *sql.Rows) error) {
 	tb.Helper()
 
 	db := NewDB(tb)

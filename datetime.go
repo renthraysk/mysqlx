@@ -40,7 +40,7 @@ type NullDate struct {
 	Valid bool
 }
 
-func (d *NullDate) Scan(src interface{}) error {
+func (d *NullDate) Scan(src any) error {
 	if src == nil {
 		d.Valid = false
 		return nil
@@ -104,7 +104,7 @@ func (dt *DateTime) Unmarshal(b []byte) error {
 	return nil
 }
 
-func (dt *DateTime) Scan(src interface{}) error {
+func (dt *DateTime) Scan(src any) error {
 	switch v := src.(type) {
 	case *DateTime:
 		dt = v
@@ -118,7 +118,7 @@ type NullDateTime struct {
 	Valid bool
 }
 
-func (dt *NullDateTime) Scan(src interface{}) error {
+func (dt *NullDateTime) Scan(src any) error {
 	if src == nil {
 		dt.Valid = false
 		return nil
