@@ -311,7 +311,7 @@ func appendAnyDuration(p []byte, tag uint8, d time.Duration) []byte {
 	return p
 }
 
-func appendAnyValue(p []byte, tag uint8, value interface{}) ([]byte, error) {
+func appendAnyValue(p []byte, tag uint8, value any) ([]byte, error) {
 
 derefLoop:
 	if value == nil {
