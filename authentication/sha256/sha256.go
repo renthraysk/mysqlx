@@ -37,7 +37,6 @@ func (Auth) Continue(buf []byte, credentials authentication.Credentials, authDat
 	h := sha256.New()
 	h.Write([]byte(credentials.Password()))
 	h1 := h.Sum(ad[i:i])
-
 	h.Reset()
 	h.Write(h1)
 	h2 := h.Sum(ad[i+sha256.Size : i+sha256.Size])
@@ -47,8 +46,8 @@ func (Auth) Continue(buf []byte, credentials authentication.Credentials, authDat
 	h.Write(authData)
 	h2 = h.Sum(h2[:0])
 
-	for i, x := range h1 {
-		h2[i] ^= x
+	for j, x := range h1 {
+		h2[j] ^= x
 	}
 	hex.Encode(ad[i:], h2)
 

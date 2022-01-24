@@ -51,8 +51,8 @@ func (Auth) Continue(buf []byte, credentials authentication.Credentials, authDat
 		h.Write(h2)
 		h2 = h.Sum(h2[:0])
 
-		for i, x := range h1 {
-			h2[i] ^= x
+		for j, x := range h1 {
+			h2[j] ^= x
 		}
 		hex.Encode(ad[i:], h2)
 	}
