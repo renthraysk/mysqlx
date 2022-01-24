@@ -98,8 +98,8 @@ func WithDatabase(database string) Option {
 }
 
 // WithAuthentication set the authentication mechanism that will authentication with.
-// If authenticating a connection over TLS then either authentication/native or authentication/sha256.
-// If not using a TLS connection then authentication/native is the only reliable option.
+// If authenticating a connection over TLS then either authentication/mysql41 or authentication/sha256.
+// If not using a TLS connection then authentication/mysql41 is the only reliable option.
 func WithAuthentication(auth authentication.Starter) Option {
 	return func(cnn *Connector) error {
 		cnn.authentication = auth
