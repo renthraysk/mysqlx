@@ -1,7 +1,6 @@
 package mysqlx
 
 import (
-	"bufio"
 	"context"
 	"crypto/tls"
 	"database/sql"
@@ -9,7 +8,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"sync/atomic"
 	"time"
@@ -40,14 +38,11 @@ func (c *connStatus) Set(s connStatus) {
 }
 
 type conn struct {
-	status connStatus
-
-	netConn   net.Conn
-	r         *bufio.Reader
-	discard   int
-	connector *Connector
-	buf       []byte
-
+	status        connStatus
+	netConn       net.Conn
+	r             Peeker
+	connector     *Connector
+	buf           []byte
 	hasClientID   bool
 	clientID      uint64
 	preparedStmts map[string]uint32
@@ -62,42 +57,41 @@ func (c *conn) replaceBuffer() {
 }
 
 func (c *conn) readMessage(ctx context.Context) (mysqlx.ServerMessages_Type, []byte, error) {
-	if c.discard > 0 {
-		c.r.Discard(c.discard)
-		c.discard = 0
-	}
-	b, err := c.r.Peek(5)
+	const hdrSize = 5
+
+	deadline, _ := ctx.Deadline()
+	hdr, err := c.r.Peek(hdrSize, deadline)
 	if err != nil {
 		return 0, nil, err
 	}
-	n := binary.LittleEndian.Uint32(b)
-	t := mysqlx.ServerMessages_Type(b[4])
-	c.r.Discard(5)
-	if n <= 1 {
-		return t, nil, nil
-	}
-	n--
-	switch b, err = c.r.Peek(int(n)); err {
-	case bufio.ErrBufferFull:
-		if cap(b) < int(n) {
-			c.buf = make([]byte, (n+4095) & ^uint32(4095))
-		}
-		i := copy(c.buf, b)
-		c.r.Discard(i)
-		b = c.buf[:n]
-		_, err = io.ReadFull(c.r, b[i:])
-	case nil:
-		c.discard = int(n)
-
+	typ := mysqlx.ServerMessages_Type(hdr[4])
+	size := binary.LittleEndian.Uint32(hdr[:4])
+	switch size {
+	case 0:
+		return 0, nil, errors.New("msg size of 0 invalid")
+	case 1:
+		c.r.Discard(len(hdr))
+		return typ, nil, nil
 	default:
+		if size > (1<<31)-hdrSize {
+			return 0, nil, errors.New("msg size overflows 2Gb")
+		}
 	}
-	return t, b, err
+	// Rather than discard we peek the header + body, so only
+	// call Discard() once when certain have access to an entire
+	// message without error
+	buf, err := c.r.Peek(len(hdr)+int(size)-1, deadline) // -1 as type byte is counted in size, whereas this code includes it in the header
+	if err != nil {
+		return 0, nil, err
+	}
+	c.r.Discard(len(buf))
+	return typ, buf[len(hdr):], nil
 }
 
 func (c *conn) send(ctx context.Context, m msg.Msg) error {
 	deadline, _ := ctx.Deadline()
-	if err := c.netConn.SetDeadline(deadline); err != nil {
-		return fmt.Errorf("unable to set deadline: %w", err)
+	if err := c.netConn.SetWriteDeadline(deadline); err != nil {
+		return fmt.Errorf("unable to set write deadline: %w", err)
 	}
 	n, err := m.WriteTo(c.netConn)
 	if err != nil && n == 0 {
@@ -111,8 +105,8 @@ func (c *conn) sendN(ctx context.Context, b []byte) error {
 		return nil
 	}
 	deadline, _ := ctx.Deadline()
-	if err := c.netConn.SetDeadline(deadline); err != nil {
-		return fmt.Errorf("unable to set deadline: %w", err)
+	if err := c.netConn.SetWriteDeadline(deadline); err != nil {
+		return fmt.Errorf("unable to set write deadline: %w", err)
 	}
 	if _, err := c.netConn.Write(b); err != nil {
 		return fmt.Errorf("sending: %w", err)
@@ -121,30 +115,103 @@ func (c *conn) sendN(ctx context.Context, b []byte) error {
 
 	// @TODO Needs to understand expectations, and mimick error handling
 	for i := 0; len(b) >= 5; i++ {
-	read:
-		for {
-			t, s, err2 := c.readMessage(ctx)
-			if err2 != nil {
-				return err2
+		if erri := c.readMessages(ctx); erri != nil {
+			if err == nil {
+				err = make(errs.Errors)
 			}
-			switch t {
-			case mysqlx.ServerMessages_OK, mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-				break read
-
-			case mysqlx.ServerMessages_NOTICE:
-
-			case mysqlx.ServerMessages_ERROR:
-				if err == nil {
-					err = make(errs.Errors)
-				}
-				err[i] = errs.New(s)
-				break read
-			}
+			err[i] = erri
 		}
-		b = b[binary.LittleEndian.Uint32(b)+4:]
+		b = b[uint64(binary.LittleEndian.Uint32(b))+4:]
 	}
 	if len(err) > 0 {
 		return err
+	}
+	return nil
+}
+
+// readMessages read set of Message in response to a single sent client message
+func (c *conn) readMessages(ctx context.Context) error {
+	t, b, err := c.readMessage(ctx)
+	if err != nil {
+		return fmt.Errorf(" : %w", err)
+	}
+	for t == mysqlx.ServerMessages_NOTICE {
+		r := &result{}
+		if err := c.readNotice(b, r); err != nil {
+			return fmt.Errorf("failed to read notice: %w", err)
+		}
+		t, b, err = c.readMessage(ctx)
+	}
+	switch t {
+	case mysqlx.ServerMessages_OK, mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
+		return nil
+
+	case mysqlx.ServerMessages_ERROR:
+		return errs.New(b)
+	}
+	return fmt.Errorf("Unexpected message type (%s)", t.String())
+}
+
+func (c *conn) readNotice(b []byte, r *result) error {
+	var f mysqlx_notice.Frame
+
+	if err := proto.Unmarshal(b, &f); err != nil {
+		return fmt.Errorf("failed to unmarshal Frame: %w", err)
+	}
+
+	switch mysqlx_notice.Frame_Type(f.GetType()) {
+	case mysqlx_notice.Frame_WARNING:
+		var w mysqlx_notice.Warning
+
+		if err := proto.Unmarshal(f.Payload, &w); err != nil {
+			return fmt.Errorf("failed to unmarshal Warning: %w", err)
+		}
+
+	case mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED:
+		var v mysqlx_notice.SessionVariableChanged
+
+		if err := proto.Unmarshal(f.Payload, &v); err != nil {
+			return fmt.Errorf("failed to unmarshal SessionVariableChanged: %w", err)
+		}
+
+	case mysqlx_notice.Frame_SESSION_STATE_CHANGED:
+		var s mysqlx_notice.SessionStateChanged
+
+		if err := proto.Unmarshal(f.Payload, &s); err != nil {
+			return fmt.Errorf("failed to unmarshal SessionStateChanged: %w", err)
+		}
+		switch s.GetParam() {
+		case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
+		case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
+		case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
+			r.lastInsertID, r.hasLastInsertID = scalarUint(s.Value[0])
+
+		case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
+			if len(s.Value) != 1 {
+				return errors.New("unexpected number of rows affected values")
+			}
+			r.rowsAffected, r.hasRowsAffected = scalarUint(s.Value[0])
+
+		case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
+			if len(s.Value) != 1 {
+				return errors.New("unexpected number of rows found values")
+			}
+			r.rowsFound, r.hasRowsFound = scalarUint(s.Value[0])
+
+		case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
+			if len(s.Value) != 1 {
+				return errors.New("unexpected number of rows matched values")
+			}
+			r.rowsMatched, r.hasRowsMatched = scalarUint(s.Value[0])
+
+		case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
+		case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
+
+		case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
+
+		case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
+			c.clientID, c.hasClientID = scalarUint(s.Value[0])
+		}
 	}
 	return nil
 }
@@ -164,76 +231,15 @@ func (c *conn) execMsg(ctx context.Context, m msg.Msg) (driver.Result, error) {
 			return nil, err
 		}
 		switch t {
-		case mysqlx.ServerMessages_OK:
+		case mysqlx.ServerMessages_OK, mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
 			return r, nil
 
 		case mysqlx.ServerMessages_ERROR:
 			return nil, c.handleError(b)
 
-		case mysqlx.ServerMessages_SQL_STMT_EXECUTE_OK:
-			return r, nil
-
 		case mysqlx.ServerMessages_NOTICE:
-			var f mysqlx_notice.Frame
-
-			if err := proto.Unmarshal(b, &f); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal Frame: %w", err)
-			}
-
-			switch mysqlx_notice.Frame_Type(f.GetType()) {
-			case mysqlx_notice.Frame_WARNING:
-				var w mysqlx_notice.Warning
-
-				if err := proto.Unmarshal(f.Payload, &w); err != nil {
-					return nil, fmt.Errorf("failed to unmarshal Warning: %w", err)
-				}
-
-			case mysqlx_notice.Frame_SESSION_VARIABLE_CHANGED:
-				var v mysqlx_notice.SessionVariableChanged
-
-				if err := proto.Unmarshal(f.Payload, &v); err != nil {
-					return nil, fmt.Errorf("failed to unmarshal SessionVariableChanged: %w", err)
-				}
-
-			case mysqlx_notice.Frame_SESSION_STATE_CHANGED:
-				var s mysqlx_notice.SessionStateChanged
-
-				if err := proto.Unmarshal(f.Payload, &s); err != nil {
-					return nil, fmt.Errorf("failed to unmarshal SessionStateChanged: %w", err)
-				}
-				switch s.GetParam() {
-				case mysqlx_notice.SessionStateChanged_CURRENT_SCHEMA:
-				case mysqlx_notice.SessionStateChanged_ACCOUNT_EXPIRED:
-				case mysqlx_notice.SessionStateChanged_GENERATED_INSERT_ID:
-
-					r.lastInsertID, r.hasLastInsertID = scalarUint(s.Value[0])
-
-				case mysqlx_notice.SessionStateChanged_ROWS_AFFECTED:
-					if len(s.Value) != 1 {
-						return nil, errors.New("unexpected number of rows affected values")
-					}
-					r.rowsAffected, r.hasRowsAffected = scalarUint(s.Value[0])
-
-				case mysqlx_notice.SessionStateChanged_ROWS_FOUND:
-					if len(s.Value) != 1 {
-						return nil, errors.New("unexpected number of rows found values")
-					}
-					r.rowsFound, r.hasRowsFound = scalarUint(s.Value[0])
-
-				case mysqlx_notice.SessionStateChanged_ROWS_MATCHED:
-					if len(s.Value) != 1 {
-						return nil, errors.New("unexpected number of rows matched values")
-					}
-					r.rowsMatched, r.hasRowsMatched = scalarUint(s.Value[0])
-
-				case mysqlx_notice.SessionStateChanged_TRX_COMMITTED:
-				case mysqlx_notice.SessionStateChanged_TRX_ROLLEDBACK:
-
-				case mysqlx_notice.SessionStateChanged_PRODUCED_MESSAGE:
-
-				case mysqlx_notice.SessionStateChanged_CLIENT_ID_ASSIGNED:
-					c.clientID, c.hasClientID = scalarUint(s.Value[0])
-				}
+			if err := c.readNotice(b, r); err != nil {
+				return nil, err
 			}
 		default:
 		}

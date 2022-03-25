@@ -1,7 +1,6 @@
 package mysqlx
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -22,7 +21,7 @@ import (
 	"github.com/renthraysk/mysqlx/msg"
 )
 
-// Dailer interface documenting our requirements for dialing a MySQL server.
+// Dialer interface documenting our requirements for dialing a MySQL server.
 type Dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
@@ -236,10 +235,10 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 
 	conn := &conn{
 		netConn:   netConn,
-		r:         bufio.NewReaderSize(netConn, cnn.bufferSize),
 		connector: cnn,
 		buf:       make([]byte, cnn.bufferSize),
 	}
+	conn.r.Reset(netConn)
 
 	// TLS
 	if _, ok := netConn.(*net.TCPConn); ok && cnn.tlsConfig != nil {
@@ -281,11 +280,11 @@ func (cnn *Connector) Connect(ctx context.Context) (driver.Conn, error) {
 	cnn.resetBuild.Do(func() {
 		// Build byteslice to be written/executed on every connect & reset.
 
-		const ExpectFieldKeepOpen = "6.1"
+		const ExpectFieldSessionResetKeepOpen = "6.1"
 
 		// See if MySQL supports session-reset's keepOpen field...
 		b := newBuilder()
-		b.WriteExpectField(ExpectFieldKeepOpen)
+		b.WriteExpectField(ExpectFieldSessionResetKeepOpen)
 		b.WriteExpectClose()
 
 		cnn.resetKeepOpen = false
