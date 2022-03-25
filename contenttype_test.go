@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSendJSON(t *testing.T) {
@@ -25,22 +23,23 @@ func TestSendJSON(t *testing.T) {
 	}
 
 	j, err := json.Marshal(expected)
-	assert.NoError(t, err)
+	assertNoError(t, err)
 
 	var b []byte
-	var retrieved Thing
+	var actual Thing
 
 	r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", JSON(j))
-	assert.NoError(t, err)
+	assertNoError(t, err)
 	n, err := r.RowsAffected()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), n)
+	assertNoError(t, err)
+	assertComparableEqual(t, int64(1), n)
 	id, err := r.LastInsertId()
-	assert.NoError(t, err)
-	assert.NoError(t, db.QueryRowContext(context.Background(), "SELECT json FROM json WHERE id = ?", id).Scan(&b))
-	assert.NoError(t, json.Unmarshal(b, &retrieved))
-	assert.Equal(t, expected, &retrieved)
+	assertNoError(t, err)
+	assertNoError(t, db.QueryRowContext(context.Background(), "SELECT json FROM json WHERE id = ?", id).Scan(&b))
+	assertNoError(t, json.Unmarshal(b, &actual))
 
+	assertComparableEqual(t, expected.Name, actual.Name)
+	assertComparableEqual(t, expected.Number, actual.Number)
 }
 
 func TestSendJSONNull(t *testing.T) {
@@ -50,14 +49,17 @@ func TestSendJSONNull(t *testing.T) {
 	defer db.Close()
 
 	r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", JSON(nil))
-	assert.NoError(t, err)
+	assertNoError(t, err)
 	n, err := r.RowsAffected()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), n)
+	assertNoError(t, err)
+	assertComparableEqual(t, int64(1), n)
 	id, err := r.LastInsertId()
-	assert.NoError(t, err)
-	assert.NoError(t, db.QueryRowContext(context.Background(), "SELECT json FROM json WHERE id = ?", id).Scan(&b))
-	assert.Nil(t, b)
+	assertNoError(t, err)
+	assertNoError(t, db.QueryRowContext(context.Background(), "SELECT json FROM json WHERE id = ?", id).Scan(&b))
+
+	if !isNil(b) {
+		t.Fatalf("expected nil, got %T(%v)", b, b)
+	}
 }
 
 func TestSendXML(t *testing.T) {
@@ -77,18 +79,20 @@ func TestSendXML(t *testing.T) {
 		Number:  42,
 	}
 	var b []byte
-	var retrieved Thing
+	var actual Thing
 
 	x, err := xml.Marshal(expected)
-	assert.NoError(t, err)
+	assertNoError(t, err)
 	r, err := db.ExecContext(context.Background(), "INSERT INTO xml(xml) VALUES(?)", XML(x))
-	assert.NoError(t, err)
+	assertNoError(t, err)
 	n, err := r.RowsAffected()
-	assert.NoError(t, err)
-	assert.Equal(t, int64(1), n)
+	assertNoError(t, err)
+	assertComparableEqual(t, int64(1), n)
 	id, err := r.LastInsertId()
-	assert.NoError(t, err)
-	assert.NoError(t, db.QueryRowContext(context.Background(), "SELECT xml FROM xml WHERE id = ?", id).Scan(&b))
-	assert.NoError(t, xml.Unmarshal(b, &retrieved))
-	assert.Equal(t, expected, &retrieved)
+	assertNoError(t, err)
+	assertNoError(t, db.QueryRowContext(context.Background(), "SELECT xml FROM xml WHERE id = ?", id).Scan(&b))
+	assertNoError(t, xml.Unmarshal(b, &actual))
+
+	assertComparableEqual(t, expected.Name, actual.Name)
+	assertComparableEqual(t, expected.Number, actual.Number)
 }

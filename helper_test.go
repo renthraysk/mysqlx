@@ -3,6 +3,7 @@ package mysqlx
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"testing"
 )
 
@@ -20,7 +21,7 @@ func NewConnector(tb testing.TB) *Connector {
 		WithDefaultConnectAttrs(),
 	)
 	if err != nil {
-		tb.Fatalf("creating connector failed: %s", err)
+		tb.Fatalf("failed creating connector: %s", err)
 	}
 	return connector
 }
@@ -54,5 +55,29 @@ func query(tb testing.TB, sql string, args []any, scan func(rows *sql.Rows) erro
 	}
 	if err := rows.Close(); err != nil {
 		tb.Fatalf("Close return error: %s", err)
+	}
+}
+
+func isNil(value any) bool {
+	const Nilable = 1<<reflect.Chan | 1<<reflect.Func | 1<<reflect.Interface | 1<<reflect.Map | 1<<reflect.Ptr | 1<<reflect.Slice
+
+	if value == nil {
+		return true
+	}
+	v := reflect.ValueOf(value)
+	return (1<<v.Kind())&Nilable != 0 && v.IsNil()
+}
+
+func assertComparableEqual[T comparable](t *testing.T, expected T, actual any) {
+	t.Helper()
+	if v, ok := actual.(T); !ok || v != expected {
+		t.Fatalf("expected %T(%v), got %T(%v)", expected, expected, actual, actual)
+	}
+}
+
+func assertNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("unexpected error: %+v", err)
 	}
 }

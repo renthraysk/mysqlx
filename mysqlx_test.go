@@ -3,126 +3,143 @@ package mysqlx
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"fmt"
+	"io"
 	"math"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
+func anySlice[T any](in []T) []any {
+	r := make([]any, len(in))
+	for i, x := range in {
+		r[i] = any(x)
+	}
+	return r
+}
+
+func anySlicePtr[T any](out []T) []any {
+	r := make([]any, len(out))
+	for i := range out {
+		r[i] = &out[i]
+	}
+	return r
+}
+
+var roundTripSelects = [...]string{
+	0: "",
+	1: "SELECT ?",
+	2: "SELECT ?, ?",
+	3: "SELECT ?, ?, ?",
+	4: "SELECT ?, ?, ?, ?",
+	5: "SELECT ?, ?, ?, ?, ?",
+	6: "SELECT ?, ?, ?, ?, ?, ?",
+	7: "SELECT ?, ?, ?, ?, ?, ?, ?",
+	8: "SELECT ?, ?, ?, ?, ?, ?, ?, ?",
+	9: "SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?",
+}
+
+func roundTrip[T any](t *testing.T, in []T) []T {
+	t.Helper()
+	out := make([]T, len(in))
+	query(t, roundTripSelects[len(in)], anySlice(in), func(rows *sql.Rows) error { return rows.Scan(anySlicePtr(out)...) })
+	return out
+}
+
+func roundTripComparable[T comparable](t *testing.T, in []T) {
+	actual := roundTrip(t, in)
+
+	if len(in) != len(actual) {
+		t.Fatalf("slice len expected %d, got %d", len(in), len(actual))
+	}
+	for i, x := range in {
+		if a := actual[i]; a != x {
+			t.Fatalf("index %d expected %v, got %v", i, in, a)
+		}
+	}
+}
+
 func TestNull(t *testing.T) {
-	var null any
-
-	null = 42
-	query(t, "SELECT ?", []any{nil}, func(rows *sql.Rows) error { return rows.Scan(&null) })
-	require.Nil(t, null)
-}
-
-func TestBool(t *testing.T) {
-	expected := []bool{false, true}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
+	out := any(42)
+	query(t, roundTripSelects[1], []any{nil}, func(rows *sql.Rows) error { return rows.Scan(&out) })
+	if !isNil(out) {
+		t.Fatalf("expected nil, got %T(%v)", out, out)
 	}
-	out := make([]bool, len(expected))
-
-	query(t, "SELECT ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1]) })
-	require.Equal(t, expected, out)
 }
 
-func TestUint(t *testing.T) {
-	expected := []uint64{0, math.MaxUint64}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
-	}
-	out := make([]uint64, len(expected))
-
-	query(t, "SELECT ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1]) })
-	require.Equal(t, expected, out)
-}
-
-func TestInt(t *testing.T) {
-	expected := []int64{math.MinInt64, 0, math.MaxInt64}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
-	}
-	out := make([]int64, len(expected))
-
-	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	require.Equal(t, expected, out)
-}
-
-func TestFloat32(t *testing.T) {
+func TestTypes(t *testing.T) {
+	roundTripComparable(t, []bool{false, true})
+	roundTripComparable(t, []uint64{0, math.MaxUint64})
+	roundTripComparable(t, []int64{math.MinInt64, 0, math.MaxInt64})
 	// @TODO math.MaxFloat32 appears to get truncated on a roundtrip
-	expected := []float32{0, math.SmallestNonzeroFloat32, math.MaxFloat32 - 3.5e+32}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
-	}
-	out := make([]float32, len(expected))
-
-	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	require.Equal(t, expected, out)
-}
-
-func TestFloat64(t *testing.T) {
+	roundTripComparable(t, []float32{0, math.SmallestNonzeroFloat32, math.MaxFloat32 - 3.5e+32})
 	// @TODO math.MaxFloat64 appears to get truncated on a roundtrip
-	expected := []float64{0, math.SmallestNonzeroFloat64, math.MaxFloat64 - 3.1348623157e+302}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
-	}
-	out := make([]float64, len(expected))
+	roundTripComparable(t, []float64{0, math.SmallestNonzeroFloat64, math.MaxFloat64 - 3.1348623157e+302})
+	roundTripComparable(t, []string{"", "abc", "abcdef"})
 
-	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	require.Equal(t, expected, out)
-}
+	//	out := roundTrip(t, [][]byte{{}, {0x00}, []byte("abcdef")})
 
-func TestString(t *testing.T) {
-	expected := []string{"", "abc", "abcdef"}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
-	}
-	out := make([]string, len(expected))
-
-	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	require.Equal(t, expected, out)
 }
 
 func TestDuration(t *testing.T) {
+	var actual []byte
 
-	var d []byte
+	tests := []struct {
+		time.Duration
+		expected string
+	}{
+		{0, "0 00 00"},
+		{1 * time.Second, "0 00 01"},
+		{59 * time.Second, "0 00 59"},
+		{1 * time.Minute, "0 01 00"},
+		{59 * time.Minute, "0 59 00"},
+		{1 * time.Hour, "1 00 00"},
+		{24 * time.Hour, "24 00 00"},
+		{839*time.Hour - time.Second, "838 59 59"},
 
-	query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []any{839*time.Hour - time.Second}, func(rows *sql.Rows) error { return rows.Scan(&d) })
+		{-1 * time.Second, "-0 00 01"},
+		{-59 * time.Second, "-0 00 59"},
+		{-1 * time.Minute, "-0 01 00"},
+		{-59 * time.Minute, "-0 59 00"},
+		{-1 * time.Hour, "-1 00 00"},
+		{-24 * time.Hour, "-24 00 00"},
+		{-839*time.Hour + time.Second, "-838 59 59"},
+	}
 
-	require.Equal(t, []byte("838 59 59"), d)
+	for _, tt := range tests {
+		query(t, "SELECT TIME_FORMAT(?, '%k %i %s')", []any{tt.Duration}, func(rows *sql.Rows) error { return rows.Scan(&actual) })
+		if string(actual) != tt.expected {
+			t.Fatalf("expected %q got %q", tt.expected, actual)
+		}
+	}
 }
 
 func TestLargeBlob(t *testing.T) {
+	const (
+		minSize = 1 << 10
+		maxSize = 4 << 20
+	)
 
-	var d []byte
+	sizes := []int{minSize, 10240, 1 << 20, maxSize}
 
-	a := bytes.Repeat([]byte{'A', 'B', 'C'}, 4*1024*1024)
+	expected := make([]byte, maxSize)
 
-	query(t, "SELECT ?", []any{a}, func(rows *sql.Rows) error { return rows.Scan(&d) })
-
-	require.Equal(t, a, d)
-}
-
-func TestBytes(t *testing.T) {
-	expected := [][]byte{{}, {0x00}, []byte("abcdef")}
-	in := make([]any, len(expected))
-	for i := 0; i < len(expected); i++ {
-		in[i] = any(expected[i])
+	for _, n := range sizes {
+		if _, err := io.ReadFull(rand.Reader, expected[n-minSize:n]); err != nil {
+			t.Fatalf("failed to generate random blob: %v", err)
+		}
 	}
-	out := make([][]byte, len(expected))
 
-	query(t, "SELECT ?, ?, ?", in, func(rows *sql.Rows) error { return rows.Scan(&out[0], &out[1], &out[2]) })
-	require.Equal(t, expected, out)
+	for _, n := range sizes {
+		t.Run(fmt.Sprintf("%d", n), func(t *testing.T) {
+			actual := roundTrip(t, [][]byte{expected[:n]})
+			if len(actual[0]) != n || !bytes.Equal(expected[:n], actual[0]) {
+				t.Fatalf("expected %s...%d got %s...%d", expected[:9], len(expected), actual[0][:9], len(actual[0]))
+			}
+		})
+	}
 }
 
 func TestRowsAffected(t *testing.T) {
@@ -130,36 +147,38 @@ func TestRowsAffected(t *testing.T) {
 	defer db.Close()
 
 	_, err := db.ExecContext(context.Background(), "DROP TABLE IF EXISTS rowsAffected")
-	require.NoError(t, err)
+	assertNoError(t, err)
 
 	_, err = db.ExecContext(context.Background(), "CREATE TABLE rowsAffected(ID INT)")
-	require.NoError(t, err)
+	assertNoError(t, err)
 	{
-		r, err := db.ExecContext(context.Background(), "INSERT INTO rowsAffected VALUES(?)", 42)
-		require.NoError(t, err)
-		require.NotNil(t, r)
+		r, err := db.ExecContext(context.Background(), "INSERT INTO rowsAffected(ID) VALUES(?)", 42)
+		assertNoError(t, err)
 
 		n, err := r.RowsAffected()
-		require.NoError(t, err)
-		require.Equal(t, n, int64(1))
+		assertNoError(t, err)
+		if n != int64(1) {
+			t.Fatalf("RowsAffected() expected 1, got %v", n)
+		}
 	}
 	{
 		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 9)
-		require.NoError(t, err)
-		require.NotNil(t, r)
+		assertNoError(t, err)
 
 		n, err := r.RowsAffected()
-		require.NoError(t, err)
-		require.Equal(t, n, int64(0))
+		assertNoError(t, err)
+		if n != int64(0) {
+			t.Fatalf("RowsAffected() expected int64(0), got %T(%v)", n, n)
+		}
 	}
 	{
 		r, err := db.ExecContext(context.Background(), "UPDATE rowsAffected SET ID = ? WHERE ID = ?", 3, 42)
-		require.NoError(t, err)
-		require.NotNil(t, r)
-
+		assertNoError(t, err)
 		n, err := r.RowsAffected()
-		require.NoError(t, err)
-		require.Equal(t, n, int64(1))
+		assertNoError(t, err)
+		if n != int64(1) {
+			t.Fatalf("RowsAffected() expected int64(0), got %T(%v)", n, n)
+		}
 	}
 }
 
@@ -177,20 +196,31 @@ func TestMultipleResultsets(t *testing.T) {
 	defer db.Close()
 
 	rows, err := db.Query("CALL spMultipleResultsets(?, ?)", A, B)
-	if err != nil {
-		t.Fatalf("query failed: %s", err)
+	assertNoError(t, err)
+	if !rows.Next() {
+		t.Fatal("rows.Next() returned false, expected true")
 	}
-	defer rows.Close()
-
-	require.True(t, rows.Next(), "rows.Next returned false")
-	require.NoError(t, rows.Scan(&a))
-	require.Equal(t, A, a)
-	require.False(t, rows.Next(), "rows.Next returned true")
-	require.True(t, rows.NextResultSet(), "rows.NextResulSet returned false")
-	require.True(t, rows.Next(), "rows.Next returned false")
-	require.NoError(t, rows.Scan(&b))
-	require.Equal(t, B, b)
-	require.False(t, rows.Next(), "rows.Next returned true")
+	assertNoError(t, rows.Scan(&a))
+	if a != A {
+		t.Fatalf("expected %q got %T(%q)", A, a, a)
+	}
+	if rows.Next() {
+		t.Fatal("rows.Next() returned true, expected false")
+	}
+	if !rows.NextResultSet() {
+		t.Fatal("rows.NextResultSet() returned false, expected true")
+	}
+	if !rows.Next() {
+		t.Fatal("rows.Next() returned false, expected true")
+	}
+	assertNoError(t, rows.Scan(&b))
+	if b != B {
+		t.Fatalf("expected %q got %T(%q)", B, b, b)
+	}
+	if rows.Next() {
+		t.Fatal("rows.Next() returned true, expected false")
+	}
+	assertNoError(t, rows.Close())
 }
 
 func TestBeginTx(t *testing.T) {
@@ -211,12 +241,12 @@ func TestBeginTx(t *testing.T) {
 	for _, level := range isos {
 		{
 			tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level})
-			require.NoError(t, err)
+			assertNoError(t, err)
 			tx.Rollback()
 		}
 		{
 			tx, err := db.BeginTx(context.Background(), &sql.TxOptions{Isolation: level, ReadOnly: true})
-			require.NoError(t, err)
+			assertNoError(t, err)
 			tx.Rollback()
 		}
 	}
@@ -237,9 +267,9 @@ func TestQueryTimeout(t *testing.T) {
 	{
 		var val int64
 		rows, err := db.Query("SELECT 42")
-		require.NoError(t, err)
+		requireNoError(t, err)
 		require.True(t, rows.Next())
-		require.NoError(t, rows.Scan(&val))
+		requireNoError(t, rows.Scan(&val))
 	}
 }
 */
