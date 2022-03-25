@@ -125,7 +125,7 @@ var (
 	typeDate         = reflect.TypeOf(Date{})
 	typeNullDate     = reflect.TypeOf(NullDate{})
 	typeDateTime     = reflect.TypeOf(DateTime{})
-	typeNullDateTime = reflect.TypeOf(NullDateTime{})
+	typeNullDateTime = reflect.TypeOf(sql.NullTime{})
 	typeAny          = reflect.TypeOf(new(any)).Elem()
 )
 
