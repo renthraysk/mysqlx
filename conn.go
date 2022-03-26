@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"sync/atomic"
 	"time"
@@ -73,7 +74,7 @@ func (c *conn) readMessage(ctx context.Context) (mysqlx.ServerMessages_Type, []b
 		c.r.Discard(len(hdr))
 		return typ, nil, nil
 	default:
-		if size > (1<<31)-hdrSize {
+		if size > math.MaxInt32-hdrSize {
 			return 0, nil, errors.New("msg size overflows 2Gb")
 		}
 	}
