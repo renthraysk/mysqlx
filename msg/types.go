@@ -23,44 +23,46 @@ func (s *String) AppendAny(p []byte, tag uint8) ([]byte, error) {
 	return appendAnyString(p, tag, s.Value, s.Collation), nil
 }
 
-type Null struct{}
+func Null() null { return null{} }
 
-func (n Null) AppendAny(p []byte, tag uint8) ([]byte, error) {
+type null struct{}
+
+func (n null) AppendAny(p []byte, tag uint8) ([]byte, error) {
 	return appendAnyNull(p, tag), nil
 }
 
-type Geometry []byte
+type geometry[T []byte | string] struct{ value T }
 
-func (g Geometry) AppendAny(p []byte, tag uint8) ([]byte, error) {
-	return appendAnyBytes(p, tag, g, contentTypeGeometry), nil
+func Geometry[T []byte | string](value T) geometry[T] {
+	return geometry[T]{value: value}
 }
 
-type GeometryString string
-
-func (g GeometryString) AppendAny(p []byte, tag uint8) ([]byte, error) {
-	return appendAnyBytesString(p, tag, string(g), contentTypeGeometry), nil
+func (g geometry[T]) AppendAny(p []byte, tag uint8) ([]byte, error) {
+	return appendAnyBytesString(p, tag, g.value, contentTypeGeometry), nil
 }
 
-type JSON []byte
+func (g geometry[T]) String() string { return string(g.value) }
 
-func (j JSON) AppendAny(p []byte, tag uint8) ([]byte, error) {
-	return appendAnyBytes(p, tag, j, contentTypeJSON), nil
+type json[T []byte | string] struct{ Value T }
+
+func JSON[T []byte | string](value T) json[T] {
+	return json[T]{Value: value}
 }
 
-type JSONString string
-
-func (j JSONString) AppendAny(p []byte, tag uint8) ([]byte, error) {
-	return appendAnyBytesString(p, tag, string(j), contentTypeJSON), nil
+func (j json[T]) AppendAny(p []byte, tag uint8) ([]byte, error) {
+	return appendAnyBytesString(p, tag, j.Value, contentTypeJSON), nil
 }
 
-type XML []byte
+func (j json[T]) String() string { return string(j.Value) }
 
-func (x XML) AppendAny(p []byte, tag uint8) ([]byte, error) {
-	return appendAnyBytes(p, tag, x, contentTypeXML), nil
+func XML[T []byte | string](value T) xml[T] {
+	return xml[T]{Value: value}
 }
 
-type XMLString string
+type xml[T []byte | string] struct{ Value T }
 
-func (x XMLString) AppendAny(p []byte, tag uint8) ([]byte, error) {
-	return appendAnyBytesString(p, tag, string(x), contentTypeXML), nil
+func (x xml[T]) AppendAny(p []byte, tag uint8) ([]byte, error) {
+	return appendAnyBytesString(p, tag, x.Value, contentTypeXML), nil
 }
+
+func (x xml[T]) String() string { return string(x.Value) }

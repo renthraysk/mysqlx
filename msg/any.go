@@ -59,7 +59,7 @@ type AnyAppender interface {
 // appendAnyUint appends an Any protobuf representing an uint64 value
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyUint(p []byte, tag uint8, x uint64) []byte {
-	n := proto.SizeVarint64(x)
+	n := proto.SizeVarint(x)
 	p = append(p, tag<<3|proto.WireBytes, 7+byte(n),
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 3+byte(n),
@@ -75,7 +75,7 @@ func appendAnyUint(p []byte, tag uint8, x uint64) []byte {
 // tag refers to the protobuf tag index, and is assumed to be > 0 and < 16
 func appendAnyInt(p []byte, tag uint8, v int64) []byte {
 	x := (uint64(v) << 1) ^ uint64(v>>63)
-	n := proto.SizeVarint64(x)
+	n := proto.SizeVarint(x)
 	p = append(p, tag<<3|proto.WireBytes, 7+byte(n),
 		tagAnyType<<3|proto.WireVarint, byte(mysqlx_datatypes.Any_SCALAR),
 		tagAnyScalar<<3|proto.WireBytes, 3+byte(n),
@@ -87,57 +87,13 @@ func appendAnyInt(p []byte, tag uint8, v int64) []byte {
 	return p[:n]
 }
 
-// appendAnyBytes appends an Any protobuf representing an octet ([]byte) value
-// tag refers to the protobuf tag index, and is assumed less to be than 16
-func appendAnyBytes(p []byte, tag uint8, bytes []byte, contentType contentType) []byte {
-	if bytes == nil {
-		return appendAnyNull(p, tag)
-	}
-	n := len(bytes)
-	n0 := 1 + proto.SizeVarint(uint(n)) + n // Scalar_Octets size
-	if contentType != contentTypePlain {
-		n0 += 1 + proto.SizeVarint32(uint32(contentType))
-	}
-	n1 := 3 + proto.SizeVarint(uint(n0)) + n0 // Scalar size
-	n2 := 3 + proto.SizeVarint(uint(n1)) + n1 // Any size
-
-	p, b := slice.ForAppend(p, 1+proto.SizeVarint(uint(n2))+n2)
-
-	i := proto.PutUvarint(b[1:], uint64(n2))
-	b[0] = tag<<3 | proto.WireBytes
-	b = b[1+i:]
-	// Any
-	i = proto.PutUvarint(b[3:], uint64(n1))
-	b[0] = tagAnyType<<3 | proto.WireVarint
-	b[1] = byte(mysqlx_datatypes.Any_SCALAR)
-	b[2] = tagAnyScalar<<3 | proto.WireBytes
-	b = b[3+i:]
-	// Scalar
-	i = proto.PutUvarint(b[3:], uint64(n0))
-	b[0] = tagScalarType<<3 | proto.WireVarint
-	b[1] = byte(mysqlx_datatypes.Scalar_V_OCTETS)
-	b[2] = tagScalarOctets<<3 | proto.WireBytes
-	b = b[3+i:]
-
-	// Scalar_Octets
-	if contentType != contentTypePlain {
-		i = proto.PutUvarint(b[1:], uint64(contentType))
-		b[0] = tagOctetContentType<<3 | proto.WireVarint
-		b = b[1+i:]
-	}
-	i = proto.PutUvarint(b[1:], uint64(n))
-	b[0] = tagOctetValue<<3 | proto.WireBytes
-	copy(b[1+i:], bytes)
-	return p
-}
-
 // appendAnyBytesString appends an Any protobuf representing an octet (string) value
 // tag refers to the protobuf tag index, and is assumed less to be than 16
-func appendAnyBytesString(p []byte, tag uint8, str string, contentType contentType) []byte {
+func appendAnyBytesString[T []byte | string](p []byte, tag uint8, str T, contentType contentType) []byte {
 	n := len(str)
 	n0 := 1 + proto.SizeVarint(uint(n)) + n // Scalar_Octets size
 	if contentType != contentTypePlain {
-		n0 += 1 + proto.SizeVarint32(uint32(contentType))
+		n0 += 1 + proto.SizeVarint(contentType)
 	}
 	n1 := 3 + proto.SizeVarint(uint(n0)) + n0 // Scalar size
 	n2 := 3 + proto.SizeVarint(uint(n1)) + n1 // Any size
@@ -178,7 +134,7 @@ func appendAnyString(p []byte, tag uint8, s string, collation collation.Collatio
 	n := len(s)
 	n0 := 1 + proto.SizeVarint(uint(n)) + n // Scalar_String size
 	if collation != 0 {
-		n0 += 1 + proto.SizeVarint64(uint64(collation))
+		n0 += 1 + proto.SizeVarint(collation)
 	}
 	n1 := 3 + proto.SizeVarint(uint(n0)) + n0 // Scalar size
 	n2 := 3 + proto.SizeVarint(uint(n1)) + n1 // Any size
@@ -321,7 +277,7 @@ derefLoop:
 	case string:
 		return appendAnyString(p, tag, v, 0), nil
 	case []byte:
-		return appendAnyBytes(p, tag, v, 0), nil
+		return appendAnyBytesString(p, tag, v, 0), nil
 	case uint:
 		return appendAnyUint(p, tag, uint64(v)), nil
 	case uint8:

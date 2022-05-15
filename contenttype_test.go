@@ -48,7 +48,7 @@ func TestSendJSONNull(t *testing.T) {
 	db := NewDB(t)
 	defer db.Close()
 
-	r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", JSON(nil))
+	r, err := db.ExecContext(context.Background(), "INSERT INTO json(json) VALUES(?)", Null())
 	assertNoError(t, err)
 	n, err := r.RowsAffected()
 	assertNoError(t, err)
